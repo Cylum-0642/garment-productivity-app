@@ -17,7 +17,8 @@ model, model_columns = load_assets()
 
 # --- UI DESIGN ---
 st.title("🧵 Garment Factory Productivity Predictor")
-st.info("**Model Info:** Tuned XGBoost Classifier. Validation is active for each field.")
+st.info("**Model Info:** Currently using a **Tuned XGBoost Classifier** (Optimized via RandomizedSearchCV). 
+This model evaluates non-linear relationships between floor operations and labor efficiency.")
 
 # We use this to track if ANY input is currently invalid
 form_is_invalid = False
