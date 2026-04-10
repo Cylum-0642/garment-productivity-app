@@ -29,7 +29,7 @@ with col1:
     st.subheader("📅 Time & Place")
     day = st.selectbox("Day of the Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
     quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
-    dept = st.selectbox("Department", ["Sewing", "Finishing"])
+    dept = st.selectbox("Department", ["Sewing", "Finished"])
     team = st.slider("Team Number", 1, 12, 1)
 
 with col2:
