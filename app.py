@@ -13,8 +13,8 @@ st.set_page_config(
 @st.cache_resource
 def load_production_assets():
     # Ensuring we use your new renamed files
-    model_path = 'model.pkl'
-    cols_path = 'columns.pkl'
+    model_path = 'rf_model.pkl'
+    cols_path = 'rf_columns.pkl'
     
     if not os.path.exists(model_path) or not os.path.exists(cols_path):
         st.error("⚠️ Critical Error: Model or Column files not found on GitHub.")
