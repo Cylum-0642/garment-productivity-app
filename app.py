@@ -43,21 +43,25 @@ with st.form("input_form"):
     st.subheader("🔹 Basic Inputs")
     col1, col2 = st.columns(2)
 
-    with col1:
-        dept = st.radio("Department", ["Sewing", "Finished"])
-        smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0)
+   st.subheader("🔹 Basic Inputs")
+col1, col2 = st.columns(2)
+
+with col1:
+    dept = st.radio("Department", ["Sewing", "Finished"], help="WIP is restricted to 0 for the Finished department.")
+    smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0)
+    
+    # Validation Logic: Lock WIP to 0 if department is 'Finished'
+    if dept == "Finished":
+        wip = 0.0
+        st.info("ℹ️ WIP automatically set to 0 for Finished department.")
+    else:
+        # Range limited to dataset max (approx 25k) but default set to a realistic 500
         wip = st.number_input(LABELS["wip"], 0.0, 25000.0, 500.0)
 
-        # --- DATA VALIDATION LOGIC ---
-        if dept == "Finished":
-            wip = 0.0
-            st.info("ℹ️ WIP is locked to 0 for Finished department (Production complete).")
-        else:
-            wip = st.number_input(LABELS["wip"], DATA_BOUNDS["wip"]["min"], DATA_BOUNDS["wip"]["max"], DATA_BOUNDS["wip"]["default"])
-
-    with col2:
-        workers = st.number_input(LABELS["no_of_workers"], 1.0, 100.0, 30.0)
-        incentive = st.number_input(LABELS["incentive"], 0, 1000, 0)
+with col2:
+    # Restricted ranges to prevent model extrapolation errors
+    workers = st.number_input(LABELS["no_of_workers"], 2.0, 100.0, 30.0)
+    incentive = st.number_input(LABELS["incentive"], 0, 200, 0) # Capped at 200 for realistic bonus scaling
 
     with st.expander("⚙️ Advanced Settings"):
         col3, col4 = st.columns(2)
