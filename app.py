@@ -36,6 +36,8 @@ pipeline, model_columns = load_assets()
 
 # --- TITLE & PURPOSE ---
 st.title("🧵 Intelligent Production Consultant")
+st.caption("🚀 Powered by a **Random Forest Classification Model** trained on historical garment factory performance data.")
+
 st.markdown("""
 **Purpose:** This tool serves as a **Decision Support System** for Factory Managers. 
 1. **Review:** Evaluate the productivity tier of past shifts.
@@ -73,7 +75,7 @@ with st.form("input_form"):
             idle_men = st.number_input(LABELS["idle_men"], 0, 50, 0, help="Number of workers waiting for work/repairs.")
             style = st.selectbox(LABELS["no_of_style_change"], [0, 1, 2])
 
-    submit = st.form_submit_button("Analyze Production Status", use_container_width=True)
+    submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
 
 # --- LOGIC ---
 if submit:
@@ -98,7 +100,7 @@ if submit:
     # Prediction
     pred_idx = pipeline.predict(input_df[model_columns])[0]
     probs = pipeline.predict_proba(input_df[model_columns])[0]
-    labels = ['High', 'Low', 'Moderate'] # Note: Scikit-learn alphabetical order
+    labels = ['High', 'Low', 'Moderate'] # Alphabetical sorting from sklearn
     status = labels[pred_idx]
 
     # --- SIDEBAR RESULT ---
@@ -106,13 +108,13 @@ if submit:
     color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
     st.sidebar.markdown(f"""
         <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center; color:white;">
-            <h2 style="margin:0;">{status}</h2>
+            <h2 style="margin:0;">{status.upper()}</h2>
             <p style="margin:0; opacity:0.8;">Productivity Level</p>
         </div>
     """, unsafe_allow_html=True)
 
-# --- MAIN DASHBOARD ---
-    t1, t2 = st.tabs(["Analysis", "Operational Benchmarks"])
+    # --- MAIN DASHBOARD ---
+    t1, t2 = st.tabs(["Analysis & Recommendations", "Operational Benchmarks"])
 
     with t1:
         st.subheader("🔍 Model Confidence")
@@ -124,17 +126,44 @@ if submit:
 
         st.divider()
         st.subheader("💡 Strategic Recommendations")
-        if status != "High":
-            if incentive < 40:
-                st.warning("⚠️ **Boost Incentive:** Current bonus is below the 'High' productivity benchmark (50.0). Consider increasing it.")
-            if idle_time > 0:
-                st.error("❌ **Reduce Idle Time:** Any machine downtime significantly drops probability of High output.")
+        
+        if status == "High":
+            st.success("### 🌟 Target Met: Optimized Production")
+            st.write("""
+            **Observation:** Your current configuration aligns with peak efficiency patterns.
+            
+            **Recommendations:**
+            - **Sustainability:** Avoid increasing 'Overtime' beyond current levels to prevent worker burnout.
+            - **Quality Assurance:** Since volume is high, increase frequency of spot checks to ensure 'High' productivity doesn't compromise seam quality.
+            - **Knowledge Sharing:** This team (Team {}) is a benchmark. Document their workflow for underperforming lines.
+            """.format(team_num))
+            st.balloons()
+
+        elif status == "Moderate":
+            st.info("### ⚖️ Target Partial: Stability Mode")
+            st.write("""
+            **Observation:** The line is steady but underperforming compared to potential capacity.
+            
+            **Recommendations:**
+            - **Incentive Gap:** Your incentive is currently {}. High-performing teams average 50.0. A small increase could bridge the productivity gap.
+            - **Bottleneck Analysis:** Check if 'WIP' ({}) is accumulating at a specific station. Moderate levels often suggest imbalanced line loading.
+            - **Skill Matrix:** Consider moving 1-2 cross-trained workers to this team to handle the current SMV complexity.
+            """.format(incentive, wip))
+
         else:
-            st.success("✅ **Balanced Setup:** This configuration is likely to meet or exceed targets.")
+            st.error("### ⚠️ Target Missed: Efficiency Warning")
+            st.write("""
+            **Observation:** Critical inefficiencies detected. High probability of failing to meet production quotas.
+            
+            **Recommendations:**
+            - **Eliminate Idle Time:** You have {} mins of idle time. This is the primary driver of 'Low' status. Investigate machine breakdowns or material delays immediately.
+            - **Resource Reallocation:** The worker count ({}) may be insufficient for an SMV of {}. 
+            - **Overtime Review:** If overtime is high but productivity is low, workers are likely fatigued. Consider an extra shift instead of extended overtime.
+            """.format(idle_time, workers, smv))
 
     with t2:
         st.subheader("📈 How you compare to 'High' Performers")
-        # Visualizing distance from the successful average
+        st.markdown("This section shows the variance between your input and the **ideal averages** for High productivity.")
         cols = st.columns(4)
         met_list = [
             ("SMV", smv, 13.7),
@@ -143,4 +172,10 @@ if submit:
             ("Workers", workers, 33.1)
         ]
         for i, (name, val, avg) in enumerate(met_list):
-            cols[i].metric(name, val, f"{val-avg:.1f} vs Avg")
+            diff = val - avg
+            cols[i].metric(name, val, f"{diff:.1f} vs High-Avg", delta_color="inverse" if name == "SMV" else "normal")
+
+        st.divider()
+        st.write("**Industrial Logic:**")
+        st.write("- **SMV:** Lower SMV (simpler styles) typically results in higher volume/productivity.")
+        st.write("- **WIP:** High-performance teams maintain a steady flow (~770 units) to avoid line starvation.")
