@@ -5,106 +5,125 @@ import os
 import numpy as np
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Garment AI: Explainable Mode", layout="wide")
+st.set_page_config(page_title="Garment AI: Consultant Mode", layout="wide")
 
-# Dataset Averages (Calculated from your cleaned dataset)
-# Used to show the user how their inputs "lean" towards different levels
+# Hardcoded Averages from your Cleaned Dataset for Comparison
 AVERAGES = {
-    'High':     {'smv': 13.7, 'wip': 770.5, 'incentive': 50.0, 'workers': 33.1, 'idle': 0.0},
-    'Moderate': {'smv': 16.7, 'wip': 682.5, 'incentive': 34.1, 'workers': 37.8, 'idle': 0.9},
-    'Low':      {'smv': 15.5, 'wip': 478.0, 'incentive': 15.1, 'workers': 32.5, 'idle': 2.3}
+    'High':     {'smv': 13.7, 'wip': 770.5, 'incentive': 50.0, 'workers': 33.1},
+    'Moderate': {'smv': 16.7, 'wip': 682.5, 'incentive': 34.1, 'workers': 37.8},
+    'Low':      {'smv': 15.5, 'wip': 478.0, 'incentive': 15.1, 'workers': 32.5}
 }
 
 @st.cache_resource
 def load_assets():
+    # Using your updated filenames
     m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
     if not os.path.exists(m_path) or not os.path.exists(c_path):
-        st.error("Missing model files.")
+        st.error(f"Missing files: {m_path} or {c_path}")
         st.stop()
     return joblib.load(m_path), joblib.load(c_path)
 
 pipeline, model_columns = load_assets()
 
-# --- 2. INPUT SECTION ---
-st.title("🧵 Intelligent Production Analysis")
-st.markdown("This prototype explains **why** the model chooses a specific productivity tier.")
+# --- 2. MAIN UI ---
+st.title("🧵 Intelligent Production Consultant")
+st.markdown("Enter factory data to receive a productivity forecast and feature analysis.")
 
 with st.form("input_form"):
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.subheader("Shift Context")
+        st.subheader("📅 Context")
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
         day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
         dept = st.radio("Department", ["Sewing", "Finished"])
     
     with c2:
-        st.subheader("Complexity & Load")
+        st.subheader("⚙️ Complexity")
         smv = st.number_input("SMV (Complexity)", 2.0, 60.0, 22.0)
         wip = st.number_input("WIP (Workload)", 0.0, 25000.0, 500.0)
-        workers = st.number_input("Workers", 1.0, 100.0, 30.0)
+        workers = st.number_input("No. of Workers", 1.0, 100.0, 30.0)
         style = st.selectbox("Style Changes", [0, 1, 2])
 
     with c3:
-        st.subheader("Performance")
+        st.subheader("💰 Performance")
         incentive = st.number_input("Incentive Amount", 0, 1000, 0)
-        overtime_raw = st.number_input("Overtime (Mins)", 0, 5000, 0)
-        idle_time = st.number_input("Idle Time (Mins)", 0.0, 300.0, 0.0)
+        overtime_raw = st.number_input("Overtime (Minutes)", 0, 5000, 0)
+        idle_time = st.number_input("Idle Time", 0.0, 300.0, 0.0)
         idle_men = st.number_input("Idle Men", 0, 50, 0)
 
-    submit = st.form_submit_button("Analyze Productivity", use_container_width=True)
+    submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
 
 # --- 3. LOGIC & PREDICTION ---
 if submit:
-    # A. Custom Scaling for Overtime (Modified Z-Score)
-    # Using Median and MAD from your cleaned dataset
+    # A. Modified Z-Score Scaling for Overtime
+    # Median = 0, MAD = 2520 based on your cleaned dataset
     ot_scaled = (overtime_raw - 0.0) / (2520.0 * 1.4826) if overtime_raw > 0 else -0.5
 
-    # B. Build Feature Vector
+    # B. Build Feature Dataframe
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
-    input_df['team'] = 1.0 # Default/Placeholder
-    input_df['smv'] = float(smv)
-    input_df['wip'] = float(wip)
-    input_df['incentive'] = float(incentive)
-    input_df['idle_time'] = float(idle_time)
-    input_df['idle_men'] = float(idle_men)
-    input_df['no_of_workers'] = float(workers)
-    input_df['over_time_scaled'] = float(ot_scaled)
+    
+    # Map Numerics
+    numeric_map = {
+        'team': 1.0, 'smv': smv, 'wip': wip, 'incentive': incentive,
+        'idle_time': idle_time, 'idle_men': idle_men, 'no_of_workers': workers,
+        'over_time_scaled': ot_scaled
+    }
+    for k, v in numeric_map.items():
+        if k in model_columns: input_df[k] = float(v)
 
-    def set_cat(cat, val):
+    # Map One-Hot
+    def set_dummy(cat, val):
         col = f"{cat}_{val}"
         if col in model_columns: input_df[col] = 1.0
-    set_cat('quarter', quarter); set_cat('department', dept.lower()); set_cat('day', day); set_cat('no_of_style_change', str(style))
 
-    # C. Run Model
+    set_dummy('quarter', quarter)
+    set_dummy('department', dept.lower())
+    set_dummy('day', day)
+    set_dummy('no_of_style_change', str(style))
+
+    # C. Prediction
     pred_idx = pipeline.predict(input_df[model_columns])[0]
+    probs = pipeline.predict_proba(input_df[model_columns])[0]
+    
+    # Alphabetical Order: High (0), Low (1), Moderate (2)
     labels = ['High', 'Low', 'Moderate']
     status = labels[pred_idx]
 
-    # --- 4. DISPLAY RESULTS ---
+    # --- 4. SIDEBAR STATUS (FIXED HTML) ---
+    st.sidebar.title("Final Status")
+    color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
     
-    # ONE WORD STATUS IN SIDEBAR
-    st.sidebar.title("Status")
-    color = "green" if status == "High" else "orange" if status == "Moderate" else "red"
-    st.sidebar.markdown(f"<h1 style='color:{color};'>{status.upper()}</h1>", unsafe_allow_all_html=True)
-    st.sidebar.metric("Scaled Overtime", round(ot_scaled, 3))
+    # FIXED: Changed unsafe_allow_all_html to unsafe_allow_html
+    st.sidebar.markdown(f"""
+        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+            <h1 style="color:white; margin:0;">{status.upper()}</h1>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # FACTOR ANALYSIS CHART
-    st.subheader("📊 Feature Influence Analysis")
-    st.write("How your inputs compare to typical **Moderate** and **Low** production environments:")
+    st.sidebar.divider()
+    st.sidebar.metric("Scaled Overtime", f"{ot_scaled:.3f}")
+    st.sidebar.write(f"Raw OT: {overtime_raw} mins")
 
-    # Simple comparison logic: Percent of the Moderate Average
-    comparison_data = {
-        "Metric": ["Complexity (SMV)", "Incentives", "Workforce Size", "WIP Level"],
-        "Your Value": [smv, incentive, workers, wip],
-        "Moderate Avg": [AVERAGES['Moderate']['smv'], AVERAGES['Moderate']['incentive'], AVERAGES['Moderate']['workers'], AVERAGES['Moderate']['wip']],
-        "Low Avg": [AVERAGES['Low']['smv'], AVERAGES['Low']['incentive'], AVERAGES['Low']['workers'], AVERAGES['Low']['wip']]
+    # --- 5. FACTOR ANALYSIS ---
+    st.subheader("📊 Comparative Feature Analysis")
+    st.info("The table below compares your current inputs against typical levels found in our dataset.")
+    
+    analysis_data = {
+        "Key Metric": ["Complexity (SMV)", "Work-in-Progress", "Incentives", "Labor (Workers)"],
+        "Your Current Input": [smv, wip, incentive, workers],
+        "Typical Moderate Level": [AVERAGES['Moderate']['smv'], AVERAGES['Moderate']['wip'], AVERAGES['Moderate']['incentive'], AVERAGES['Moderate']['workers']],
+        "Typical Low Level": [AVERAGES['Low']['smv'], AVERAGES['Low']['wip'], AVERAGES['Low']['incentive'], AVERAGES['Low']['workers']]
     }
-    comp_df = pd.DataFrame(comparison_data)
-    st.table(comp_df)
-
-    # Explanation text
-    if status == 'Moderate' and incentive < AVERAGES['High']['incentive']:
-        st.warning(f"💡 **Improvement Tip:** Your incentive ({incentive}) is below the 'High Productivity' average of {AVERAGES['High']['incentive']}. Increasing this might shift the status.")
     
-    if idle_time > 0:
-        st.error(f"🚨 **Downtime Alert:** Idle time detected. In 'High' productivity teams, idle time is usually 0.0.")
+    st.table(pd.DataFrame(analysis_data))
+
+    # Automated Consultant Feedback
+    st.subheader("💡 Consultant Observations")
+    if status != "High":
+        if incentive < AVERAGES['High']['incentive']:
+            st.warning(f"Note: Your incentive ({incentive}) is significantly lower than the average for 'High' productivity teams ({AVERAGES['High']['incentive']}).")
+        if idle_time > 0:
+            st.error(f"Note: Idle time of {idle_time} mins detected. Top-performing teams maintain zero downtime.")
+    else:
+        st.success("Configuration matches 'High Productivity' patterns. Maintain this balance!")
+        st.balloons()
