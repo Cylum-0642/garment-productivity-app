@@ -2,12 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
-import numpy as np
 
-# --- 1. CONFIG ---
+# --- CONFIG ---
 st.set_page_config(page_title="Garment AI Consultant", layout="wide")
 
-# Labels (UI only)
 LABELS = {
     "smv": "Task Complexity (Standard Minute Value)",
     "wip": "Current Workload (Work in Progress)",
@@ -19,7 +17,6 @@ LABELS = {
     "no_of_style_change": "Number of Style Changes"
 }
 
-# Benchmarks
 AVERAGES = {
     'High':     {'smv': 13.7, 'wip': 770.5, 'incentive': 50.0, 'workers': 33.1},
     'Moderate': {'smv': 16.7, 'wip': 682.5, 'incentive': 34.1, 'workers': 37.8},
@@ -36,10 +33,11 @@ def load_assets():
 
 pipeline, model_columns = load_assets()
 
-# --- 2. UI ---
+# --- TITLE ---
 st.title("🧵 Intelligent Production Consultant")
-st.markdown("Enter key production details to get a productivity prediction and insights.")
+st.markdown("Enter key production details to get a prediction and actionable insights.")
 
+# --- INPUT FORM ---
 with st.form("input_form"):
 
     st.subheader("🔹 Basic Inputs")
@@ -54,7 +52,6 @@ with st.form("input_form"):
         workers = st.number_input(LABELS["no_of_workers"], 1.0, 100.0, 30.0)
         incentive = st.number_input(LABELS["incentive"], 0, 1000, 0)
 
-    # Advanced settings (hidden)
     with st.expander("⚙️ Advanced Settings"):
         col3, col4 = st.columns(2)
 
@@ -68,13 +65,13 @@ with st.form("input_form"):
 
     submit = st.form_submit_button("Analyze Production", use_container_width=True)
 
-# --- 3. LOGIC ---
+# --- LOGIC ---
 if submit:
 
     # Overtime scaling
     ot_scaled = (overtime_raw - 0.0) / (2520.0 * 1.4826) if overtime_raw > 0 else -0.5
 
-    # Build input dataframe
+    # Build dataframe
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
 
     numeric_map = {
@@ -107,36 +104,29 @@ if submit:
     labels = ['High', 'Low', 'Moderate']
     status = labels[pred_idx]
 
-    # --- 4. OUTPUT ---
+    # --- SIDEBAR (FINAL RESULT ONLY) ---
+    st.sidebar.title("📊 Final Result")
 
-    # Prediction
-    st.subheader("📊 Production Status")
-    st.metric("Predicted Status", status)
+    color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
 
-    # Confidence
+    st.sidebar.markdown(f"""
+        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+            <h2 style="color:white; margin:0;">{status}</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # --- MAIN OUTPUT ---
+
+    # 1. Model Confidence (ordered)
     st.subheader("🔍 Model Confidence")
-    for i, label in enumerate(labels):
-        st.progress(probs[i], text=f"{label}: {probs[i]*100:.1f}%")
 
-    # Comparison (percentage bars)
-    st.subheader("📈 Performance Comparison")
+    ordered_labels = ['Low', 'Moderate', 'High']
 
-    def normalize(value, benchmark):
-        return min(value / benchmark, 1.5)
+    for label in ordered_labels:
+        idx = labels.index(label)
+        st.progress(probs[idx], text=f"{label}: {probs[idx]*100:.1f}%")
 
-    metrics = {
-        "Complexity": (smv, AVERAGES['Moderate']['smv']),
-        "Workload": (wip, AVERAGES['Moderate']['wip']),
-        "Incentive": (incentive, AVERAGES['High']['incentive']),
-        "Workers": (workers, AVERAGES['Moderate']['workers'])
-    }
-
-    for name, (val, ref) in metrics.items():
-        ratio = normalize(val, ref)
-        st.write(f"{name}: {val} (benchmark: {ref})")
-        st.progress(min(ratio, 1.0))
-
-    # Insights
+    # 2. Key Insights (short, decision-focused)
     st.subheader("💡 Key Insights")
 
     if probs[labels.index("High")] < 0.4:
@@ -147,3 +137,21 @@ if submit:
 
     if idle_time > 0:
         st.error("Idle time detected — reduces efficiency.")
+
+    # 3. Detailed Comparison (collapsible)
+    with st.expander("📈 Detailed Performance Insights"):
+
+        def normalize(value, benchmark):
+            return min(value / benchmark, 1.5)
+
+        metrics = {
+            "Task Complexity": (smv, AVERAGES['Moderate']['smv']),
+            "Workload": (wip, AVERAGES['Moderate']['wip']),
+            "Incentive": (incentive, AVERAGES['High']['incentive']),
+            "Workers": (workers, AVERAGES['Moderate']['workers'])
+        }
+
+        for name, (val, ref) in metrics.items():
+            ratio = normalize(val, ref)
+            st.write(f"{name}: {val} (benchmark: {ref})")
+            st.progress(min(ratio, 1.0))
