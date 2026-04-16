@@ -7,8 +7,8 @@ import os
 st.set_page_config(page_title="Garment AI Consultant", layout="wide", page_icon="🧵")
 
 LABELS = {
-    "smv": "Task Complexity (SMV)",
-    "wip": "Current Workload (WIP)",
+    "smv": "Task Complexity (Standard Minute Value)",
+    "wip": "Current Workload (Work in Progress)",
     "no_of_workers": "Number of Workers",
     "idle_time": "Idle Time (Minutes)",
     "idle_men": "Idle Workers",
@@ -56,13 +56,10 @@ with st.form("input_form"):
         workers = st.number_input(LABELS["no_of_workers"], 2.0, 100.0, 30.0)
 
     with col2:
-        # User-focused selections: Quarter and Team
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
         team = st.slider("Team Number", 1, 12, 1)
-        incentive = st.number_input(LABELS["incentive"], 0, 200, 0) # Realistic range for dummy company
-        
-        # Hidden Default for 'Day' to keep model accuracy without cluttering UI
-        day_default = "Wednesday"
+        incentive = st.number_input(LABELS["incentive"], 0, 200, 0)
+        day_default = "Wednesday" # Hidden background default for model stability
 
     with st.expander("⚙️ Advanced Operational Settings"):
         col3, col4 = st.columns(2)
@@ -77,7 +74,7 @@ with st.form("input_form"):
 
 # --- LOGIC & OUTPUT ---
 if submit:
-    # 1. Data Preparation
+    # 1. Data Prep
     ot_scaled = (overtime_raw - 0.0) / (2520.0 * 1.4826) if overtime_raw > 0 else -0.5
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
 
@@ -103,11 +100,10 @@ if submit:
 
     set_dummy('department', dept.lower())
     set_dummy('quarter', quarter)
-    set_dummy('day', day_default) # Use the hidden default
+    set_dummy('day', day_default)
     set_dummy('no_of_style_change', str(style))
 
-    # 2. Prediction & Probabilities
-    # We fetch labels directly from the pipeline to ensure the index matches perfectly
+    # 2. Prediction
     model_classes = list(pipeline.classes_) 
     probs = pipeline.predict_proba(input_df[model_columns])[0]
     status = pipeline.predict(input_df[model_columns])[0]
@@ -127,7 +123,6 @@ if submit:
 
     with tab1:
         st.subheader("🔍 Model Confidence")
-        # Define the order we WANT to show, but look up the index in model_classes
         display_order = ['Low', 'Moderate', 'High']
         
         for label in display_order:
@@ -139,7 +134,30 @@ if submit:
 
         st.divider()
         st.subheader("💡 Strategic Insights")
-        high_idx = model_classes.index("High") if "High" in model_classes else None
         
-        if high_idx is not None and probs[high_idx] < 0.5:
-            st.warning("Prediction suggests a struggle to reach 'High' productivity. Review 'Benchmarking' tab to see where you are
+        # Fixed the string literal error here:
+        if "High" in model_classes:
+            high_idx = model_classes.index("High")
+            if probs[high_idx] < 0.5:
+                st.warning("Current setup has a low probability of 'High' output. Review the Benchmarking tab to identify constraints.")
+        
+        if incentive < AVERAGES['High']['incentive']:
+            st.info(f"Financial Insight: Your incentive is below the high-tier average ({AVERAGES['High']['incentive']}). Performance may increase with a bonus adjustment.")
+
+    with tab2:
+        st.subheader("📈 How you compare to the Industry Average")
+        
+        def normalize(value, benchmark):
+            return min(value / benchmark, 1.5) if benchmark != 0 else 0
+
+        metrics = {
+            "Task Complexity (SMV)": (smv, AVERAGES['Moderate']['smv']),
+            "Workload (WIP)": (wip, AVERAGES['Moderate']['wip']),
+            "Incentive Level": (incentive, AVERAGES['High']['incentive']),
+            "Staffing (Workers)": (workers, AVERAGES['Moderate']['workers'])
+        }
+
+        for name, (val, ref) in metrics.items():
+            ratio = normalize(val, ref)
+            st.write(f"**{name}**: {val} (Benchmark: {ref})")
+            st.progress(min(ratio/1.5, 1.0))
