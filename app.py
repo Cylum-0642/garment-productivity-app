@@ -97,81 +97,58 @@ if submit:
     set_dummy('department', dept.lower())
     set_dummy('no_of_style_change', str(style))
 
-    # --- PREDICTION ---
-pred_idx = pipeline.predict(input_df[model_columns])[0]
-probs = pipeline.predict_proba(input_df[model_columns])[0]
+    # Prediction
+    pred_idx = pipeline.predict(input_df[model_columns])[0]
+    probs = pipeline.predict_proba(input_df[model_columns])[0]
 
-# Use model-safe labels (IMPORTANT FIX)
-labels = list(pipeline.classes_)  # <-- FIX: prevents NameError + mismatch issues
+    labels = ['High', 'Low', 'Moderate']
+    status = labels[pred_idx]
 
-status = labels[pred_idx]
+    # --- SIDEBAR (FINAL RESULT ONLY) ---
+    st.sidebar.title("📊 Final Result")
 
-# --- SIDEBAR RESULT ---
-st.sidebar.title("📊 Final Result")
+    color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
 
-color = (
-    "#28a745" if status == "High"
-    else "#fd7e14" if status == "Moderate"
-    else "#dc3545"
-)
+    st.sidebar.markdown(f"""
+        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+            <h2 style="color:white; margin:0;">{status}</h2>
+        </div>
+    """, unsafe_allow_html=True)
 
-st.sidebar.markdown(f"""
-    <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
-        <h2 style="color:white; margin:0;">{status}</h2>
-    </div>
-""", unsafe_allow_html=True)
+    # --- MAIN OUTPUT ---
 
-
-# --- MAIN CONTENT TABS ---
-tab1, tab2 = st.tabs(["AI Confidence & Insights", "Benchmarking"])
-
-
-# =========================
-# TAB 1: INSIGHTS
-# =========================
-with tab1:
-
+    # 1. Model Confidence (ordered)
     st.subheader("🔍 Model Confidence")
 
-    label_to_idx = {label: i for i, label in enumerate(labels)}
+    ordered_labels = ['Low', 'Moderate', 'High']
 
-    display_order = ['Low', 'Moderate', 'High']
+    for label in ordered_labels:
+        idx = labels.index(label)
+        st.progress(probs[idx], text=f"{label}: {probs[idx]*100:.1f}%")
 
-    for label in display_order:
-        if label in label_to_idx:
-            idx = label_to_idx[label]
-            conf = float(probs[idx])
-            st.progress(conf, text=f"{label}: {conf*100:.1f}%")
+    # 2. Key Insights (short, decision-focused)
+    st.subheader("💡 Key Insights")
 
-    st.divider()
-    st.subheader("💡 Strategic Insights")
-
-    high_prob = probs[label_to_idx.get("High", 0)]
-
-    if high_prob < 0.4:
-        st.warning("Low probability of achieving High productivity output.")
+    if probs[labels.index("High")] < 0.4:
+        st.warning("Low probability of achieving High productivity.")
 
     if incentive < AVERAGES['High']['incentive']:
-        st.info("Increasing incentives may improve performance potential.")
+        st.info("Increasing incentives may improve performance.")
 
     if idle_time > 0:
-        st.error("Idle time detected — efficiency loss indicator.")
+        st.error("Idle time detected — reduces efficiency.")
 
+    # 3. Detailed Comparison (collapsible)
 
-# =========================
-# TAB 2: BENCHMARKING
-# =========================
-with tab2:
-
-    st.subheader("📈 Industry Benchmark Comparison")
+with st.expander("📈 View Detailed Performance Insights", expanded=False):
 
     def normalize(value, benchmark):
-        return min(value / benchmark, 1.5) if benchmark else 0
+        return min(value / benchmark, 1.5)
 
     metrics = {
         "Task Complexity (SMV)": (smv, AVERAGES['Moderate']['smv']),
         "Workload (WIP)": (wip, AVERAGES['Moderate']['wip']),
-        "Incentive Level": (incentive, AVERAGES['High']['incentive']),
+        "Incentive": (incentive, AVERAGES['High']['incentive']),
         "Workers": (workers, AVERAGES['Moderate']['workers'])
     }
 
@@ -180,4 +157,4 @@ with tab2:
 
         st.write(f"**{name}**")
         st.caption(f"Value: {val} | Benchmark: {ref}")
-        st.progress(min(ratio / 1.5, 1.0))
+        st.progress(min(ratio, 1.0))
