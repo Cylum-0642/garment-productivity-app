@@ -140,8 +140,6 @@ if submit:
 
     # 3. Detailed Comparison (collapsible)
 
-st.subheader("📊 Strategic Recommendations")
-
 with st.expander("📈 View Detailed Performance Insights", expanded=False):
 
     def normalize(value, benchmark):
