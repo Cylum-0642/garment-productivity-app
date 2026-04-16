@@ -16,7 +16,7 @@ def load_assets():
     # scaler = joblib.load('garment_scaler.pkl')
     return model, model_columns
 
-model, model_columns = load_assets()
+model, rf_model_columns = load_assets()
 
 # --- 3. UI HEADER ---
 st.title("🧵 Factory Productivity Predictor")
