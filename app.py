@@ -139,19 +139,24 @@ if submit:
         st.error("Idle time detected — reduces efficiency.")
 
     # 3. Detailed Comparison (collapsible)
-    with st.expander("📈 Detailed Performance Insights"):
 
-        def normalize(value, benchmark):
-            return min(value / benchmark, 1.5)
+st.subheader("📊 Strategic Recommendations")
 
-        metrics = {
-            "Task Complexity": (smv, AVERAGES['Moderate']['smv']),
-            "Workload": (wip, AVERAGES['Moderate']['wip']),
-            "Incentive": (incentive, AVERAGES['High']['incentive']),
-            "Workers": (workers, AVERAGES['Moderate']['workers'])
-        }
+with st.expander("📈 View Detailed Performance Insights", expanded=False):
 
-        for name, (val, ref) in metrics.items():
-            ratio = normalize(val, ref)
-            st.write(f"{name}: {val} (benchmark: {ref})")
-            st.progress(min(ratio, 1.0))
+    def normalize(value, benchmark):
+        return min(value / benchmark, 1.5)
+
+    metrics = {
+        "Task Complexity (SMV)": (smv, AVERAGES['Moderate']['smv']),
+        "Workload (WIP)": (wip, AVERAGES['Moderate']['wip']),
+        "Incentive": (incentive, AVERAGES['High']['incentive']),
+        "Workers": (workers, AVERAGES['Moderate']['workers'])
+    }
+
+    for name, (val, ref) in metrics.items():
+        ratio = normalize(val, ref)
+
+        st.write(f"**{name}**")
+        st.caption(f"Value: {val} | Benchmark: {ref}")
+        st.progress(min(ratio, 1.0))
