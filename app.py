@@ -97,57 +97,66 @@ if submit:
     set_dummy('department', dept.lower())
     set_dummy('no_of_style_change', str(style))
 
-    # Prediction
-    pred_idx = pipeline.predict(input_df[model_columns])[0]
-    probs = pipeline.predict_proba(input_df[model_columns])[0]
+    # --- PREDICTION ---
+pred_idx = pipeline.predict(input_df[model_columns])[0]
+probs = pipeline.predict_proba(input_df[model_columns])[0]
 
-    labels = ['High', 'Low', 'Moderate']
-    status = labels[pred_idx]
+# Use model-safe labels (IMPORTANT FIX)
+labels = list(pipeline.classes_)  # <-- FIX: prevents NameError + mismatch issues
 
-    # --- SIDEBAR (FINAL RESULT ONLY) ---
-    st.sidebar.title("📊 Final Result")
+status = labels[pred_idx]
 
-    color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
+# --- SIDEBAR RESULT ---
+st.sidebar.title("📊 Final Result")
 
-    st.sidebar.markdown(f"""
-        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
-            <h2 style="color:white; margin:0;">{status}</h2>
-        </div>
-    """, unsafe_allow_html=True)
+color = (
+    "#28a745" if status == "High"
+    else "#fd7e14" if status == "Moderate"
+    else "#dc3545"
+)
 
-    # --- MAIN OUTPUT ---
+st.sidebar.markdown(f"""
+    <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+        <h2 style="color:white; margin:0;">{status}</h2>
+    </div>
+""", unsafe_allow_html=True)
 
-   # --- MAIN OUTPUT ---
+
+# --- MAIN CONTENT TABS ---
 tab1, tab2 = st.tabs(["AI Confidence & Insights", "Benchmarking"])
 
+
 # =========================
-# TAB 1: AI + INSIGHTS
+# TAB 1: INSIGHTS
 # =========================
 with tab1:
 
     st.subheader("🔍 Model Confidence")
 
-    ordered_labels = ['Low', 'Moderate', 'High']
     label_to_idx = {label: i for i, label in enumerate(labels)}
 
-    for label in ordered_labels:
-        idx = label_to_idx[label]
-        conf = probs[idx]
-        st.progress(conf, text=f"{label}: {conf*100:.1f}%")
+    display_order = ['Low', 'Moderate', 'High']
+
+    for label in display_order:
+        if label in label_to_idx:
+            idx = label_to_idx[label]
+            conf = float(probs[idx])
+            st.progress(conf, text=f"{label}: {conf*100:.1f}%")
 
     st.divider()
     st.subheader("💡 Strategic Insights")
 
-    high_prob = probs[label_to_idx["High"]]
+    high_prob = probs[label_to_idx.get("High", 0)]
 
     if high_prob < 0.4:
-        st.warning("Low probability of High productivity output.")
+        st.warning("Low probability of achieving High productivity output.")
 
     if incentive < AVERAGES['High']['incentive']:
-        st.info("Incentive is below high-performance benchmark. This may limit output.")
+        st.info("Increasing incentives may improve performance potential.")
 
     if idle_time > 0:
-        st.error("Idle time detected — direct efficiency loss signal.")
+        st.error("Idle time detected — efficiency loss indicator.")
+
 
 # =========================
 # TAB 2: BENCHMARKING
