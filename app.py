@@ -111,47 +111,36 @@ if submit:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- MAIN OUTPUT ---
-    st.subheader("🔍 Model Confidence Levels")
-    ordered_labels = ['Low', 'Moderate', 'High']
-    for label in ordered_labels:
-        idx = labels.index(label)
-        st.progress(probs[idx], text=f"{label}: {probs[idx]*100:.1f}%")
+# --- MAIN DASHBOARD ---
+    t1, t2 = st.tabs(["Analysis", "Operational Benchmarks"])
 
-    # --- KEY INSIGHTS (CORRECTED LOGIC) ---
-    st.subheader("💡 Actionable Insights")
-    c_low, c_high = st.columns(2)
-    
-    with c_low:
-        if status == "Low":
-            st.error("🚨 Critical: The model predicts a Low Productivity outcome.")
-            if probs[labels.index("High")] < 0.2:
-                st.warning("⚠️ High productivity is statistically unlikely with current settings.")
-    
-    with c_high:
-        if incentive < AVERAGES['High']['incentive']:
-            st.info(f"💰 **Opportunity:** Benchmark for 'High' teams is {AVERAGES['High']['incentive']}. Try increasing incentives.")
-        if idle_time > 0:
-            st.warning(f"⏳ **Efficiency Loss:** {idle_time} mins of idle time detected. Minimize machine downtime.")
+    with t1:
+        st.subheader("🔍 Model Confidence")
+        ordered_display = ['Low', 'Moderate', 'High']
+        for lab in ordered_display:
+            if lab in labels:
+                val = probs[labels.index(lab)]
+                st.progress(val, text=f"**{lab}**: {val*100:.1f}%")
 
-    # --- BENCHMARK COMPARISON ---
-    with st.expander("📈 Benchmark vs. Target Analysis", expanded=True):
-        st.write("Comparing your current inputs against 'High Productivity' targets:")
-        
-        metrics_meta = {
-            "Incentive Target": {"val": incentive, "ref": AVERAGES['High']['incentive'], "icon": "💰", "color": "#ffc107"},
-            "Labor Capacity": {"val": workers, "ref": AVERAGES['High']['workers'], "icon": "👥", "color": "#20c997"},
-            "Complexity Match": {"val": smv, "ref": AVERAGES['High']['smv'], "icon": "🧩", "color": "#17a2b8"}
-        }
+        st.divider()
+        st.subheader("💡 Strategic Recommendations")
+        if status != "High":
+            if incentive < 40:
+                st.warning("⚠️ **Boost Incentive:** Current bonus is below the 'High' productivity benchmark (50.0). Consider increasing it.")
+            if idle_time > 0:
+                st.error("❌ **Reduce Idle Time:** Any machine downtime significantly drops probability of High output.")
+        else:
+            st.success("✅ **Balanced Setup:** This configuration is likely to meet or exceed targets.")
 
-        for name, data in metrics_meta.items():
-            # Calculate Percentage of Target
-            percent_of_target = (data["val"] / data["ref"]) * 100 if data["ref"] != 0 else 0
-            display_percent = min(percent_of_target, 150.0) # Cap display at 150% for visual clarity
-            
-            st.markdown(f"""
-                <div style="margin-top:15px;">
-                    <strong>{data['icon']} {name}</strong>: {percent_of_target:.1f}% of High-Prod Benchmark
-                </div>
-            """, unsafe_allow_html=True)
-            st.progress(min(display_percent/100, 1.0))
+    with t2:
+        st.subheader("📈 How you compare to 'High' Performers")
+        # Visualizing distance from the successful average
+        cols = st.columns(4)
+        met_list = [
+            ("SMV", smv, 13.7),
+            ("WIP", wip, 770.5),
+            ("Incentive", incentive, 50.0),
+            ("Workers", workers, 33.1)
+        ]
+        for i, (name, val, avg) in enumerate(met_list):
+            cols[i].metric(name, val, f"{val-avg:.1f} vs Avg")
