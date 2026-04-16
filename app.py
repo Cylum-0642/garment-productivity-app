@@ -10,8 +10,8 @@ st.set_page_config(page_title="Garment Productivity AI", layout="centered")
 @st.cache_resource
 def load_assets():
     # FILENAMES: Ensure these match exactly what you upload to GitHub!
-    model = joblib.load('garment_rf_model.pkl')
-    model_columns = joblib.load('model_columns.pkl')
+    model = joblib.load('rf_garment_model.pkl')
+    model_columns = joblib.load('rf_model_columns.pkl')
     scaler = joblib.load('garment_scaler.pkl') # For scaling over_time
     return model, model_columns, scaler
 
