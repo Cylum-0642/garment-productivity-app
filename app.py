@@ -10,8 +10,8 @@ st.set_page_config(page_title="Garment Productivity AI", layout="centered")
 @st.cache_resource
 def load_assets():
     # Loading the specific files you generated
-    model = joblib.load('garment_rf_model.pkl')
-    model_columns = joblib.load('model_columns.pkl')
+    model = joblib.load('rf_garment_model.pkl')
+    model_columns = joblib.load('rf_model_columns.pkl')
     # If your model needs the scaler for 'over_time', load it here:
     # scaler = joblib.load('garment_scaler.pkl')
     return model, model_columns
