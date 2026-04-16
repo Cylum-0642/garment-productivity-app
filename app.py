@@ -10,8 +10,8 @@ st.set_page_config(page_title="Garment AI Predictor", layout="centered")
 @st.cache_resource
 def load_assets():
     # FILENAMES: Ensure these match your new names on GitHub
-    model_file = 'model.pkl'
-    cols_file = 'columns.pkl'
+    model_file = 'rf_model.pkl'
+    cols_file = 'rf_columns.pkl'
     
     if not os.path.exists(model_file) or not os.path.exists(cols_file):
         st.error(f"❌ Missing files on GitHub! Need {model_file} and {cols_file}")
