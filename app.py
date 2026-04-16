@@ -45,20 +45,23 @@ with st.form("input_form"):
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"], help="WIP is locked to 0 for Finished department.")
         smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0)
-
+        
+        # --- WIP VALIDATION LOGIC ---
         if dept == "Finished":
             wip = 0.0
             st.info("ℹ️ WIP is automatically set to 0 for Finished department.")
         else:
             wip = st.number_input(LABELS["wip"], 0.0, 25000.0, 500.0)
-
+        
         workers = st.number_input(LABELS["no_of_workers"], 2.0, 100.0, 30.0)
 
     with col2:
+        # User-focused selections: Quarter and Team
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
         team = st.slider("Team Number", 1, 12, 1)
-        incentive = st.number_input(LABELS["incentive"], 0, 200, 0)
-
+        incentive = st.number_input(LABELS["incentive"], 0, 200, 0) # Realistic range for dummy company
+        
+        # Hidden Default for 'Day' to keep model accuracy without cluttering UI
         day_default = "Wednesday"
 
     with st.expander("⚙️ Advanced Operational Settings"):
@@ -74,7 +77,6 @@ with st.form("input_form"):
 
 # --- LOGIC & OUTPUT ---
 if submit:
-
     # 1. Data Preparation
     ot_scaled = (overtime_raw - 0.0) / (2520.0 * 1.4826) if overtime_raw > 0 else -0.5
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
@@ -101,15 +103,14 @@ if submit:
 
     set_dummy('department', dept.lower())
     set_dummy('quarter', quarter)
-    set_dummy('day', day_default)
+    set_dummy('day', day_default) # Use the hidden default
     set_dummy('no_of_style_change', str(style))
 
-    # 2. Prediction
-    model_classes = list(pipeline.classes_)
+    # 2. Prediction & Probabilities
+    # We fetch labels directly from the pipeline to ensure the index matches perfectly
+    model_classes = list(pipeline.classes_) 
     probs = pipeline.predict_proba(input_df[model_columns])[0]
     status = pipeline.predict(input_df[model_columns])[0]
-
-    class_to_prob = dict(zip(model_classes, probs))
 
     # --- SIDEBAR RESULT ---
     st.sidebar.title("📊 Analysis Result")
@@ -121,28 +122,24 @@ if submit:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- MAIN CONTENT ---
+    # --- MAIN CONTENT TABS ---
     tab1, tab2 = st.tabs(["AI Confidence & Insights", "Benchmarking"])
 
     with tab1:
         st.subheader("🔍 Model Confidence")
-
+        # Define the order we WANT to show, but look up the index in model_classes
         display_order = ['Low', 'Moderate', 'High']
-
+        
         for label in display_order:
-            conf_val = class_to_prob.get(label, 0)
-
-            st.write(f"**{label} Productivity**")
-            st.progress(float(conf_val), text=f"{conf_val*100:.1f}% confidence")
+            if label in model_classes:
+                idx = model_classes.index(label)
+                conf_val = probs[idx]
+                st.write(f"**{label} Productivity**")
+                st.progress(conf_val, text=f"{conf_val*100:.1f}% confidence")
 
         st.divider()
-
         st.subheader("💡 Strategic Insights")
-
-        high_prob = class_to_prob.get("High", 0)
-
-        if high_prob < 0.5:
-            st.warning(
-                "Prediction suggests difficulty reaching High productivity. "
-                "Check Benchmarking tab for improvement gaps."
-            )
+        high_idx = model_classes.index("High") if "High" in model_classes else None
+        
+        if high_idx is not None and probs[high_idx] < 0.5:
+            st.warning("Prediction suggests a struggle to reach 'High' productivity. Review 'Benchmarking' tab to see where you are
