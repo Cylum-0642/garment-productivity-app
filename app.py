@@ -43,9 +43,6 @@ with st.form("input_form"):
     st.subheader("🔹 Basic Inputs")
     col1, col2 = st.columns(2)
 
-   st.subheader("🔹 Basic Inputs")
-col1, col2 = st.columns(2)
-
 with col1:
     dept = st.radio("Department", ["Sewing", "Finished"], help="WIP is restricted to 0 for the Finished department.")
     smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0)
