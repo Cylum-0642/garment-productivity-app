@@ -4,11 +4,11 @@ import joblib
 import os
 
 # --- CONFIG ---
-st.set_page_config(page_title="Garment AI Consultant", layout="wide", page_icon="🧵")
+st.set_page_config(page_title="Garment AI Consultant", layout="wide")
 
 LABELS = {
-    "smv": "Task Complexity (SMV)",
-    "wip": "Current Workload (WIP)",
+    "smv": "Task Complexity (Standard Minute Value)",
+    "wip": "Current Workload (Work in Progress)",
     "no_of_workers": "Number of Workers",
     "idle_time": "Idle Time (Minutes)",
     "idle_men": "Idle Workers",
@@ -27,7 +27,7 @@ AVERAGES = {
 def load_assets():
     m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
     if not os.path.exists(m_path) or not os.path.exists(c_path):
-        st.error("Model files missing. Ensure 'rf_model.pkl' and 'rf_columns.pkl' are in the same folder.")
+        st.error("Model files missing.")
         st.stop()
     return joblib.load(m_path), joblib.load(c_path)
 
@@ -35,54 +35,47 @@ pipeline, model_columns = load_assets()
 
 # --- TITLE ---
 st.title("🧵 Intelligent Production Consultant")
-st.markdown("Enter production details to get a probability-based prediction and strategic insights.")
+st.markdown("Enter key production details to get a prediction and actionable insights.")
 
 # --- INPUT FORM ---
 with st.form("input_form"):
-    st.subheader("🔹 Production Parameters")
+
+    st.subheader("🔹 Basic Inputs")
     col1, col2 = st.columns(2)
 
     with col1:
-        dept = st.radio("Department", ["Sewing", "Finished"], help="WIP is locked to 0 for Finished department.")
+        dept = st.radio("Department", ["Sewing", "Finished"])
         smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0)
-        
-        # --- WIP VALIDATION LOGIC ---
-        if dept == "Finished":
-            wip = 0.0
-            st.info("ℹ️ WIP is automatically set to 0 for Finished department.")
-        else:
-            wip = st.number_input(LABELS["wip"], 0.0, 25000.0, 500.0)
-        
-        workers = st.number_input(LABELS["no_of_workers"], 2.0, 100.0, 30.0)
+        wip = st.number_input(LABELS["wip"], 0.0, 25000.0, 500.0)
 
     with col2:
-        # User-focused selections: Quarter and Team
-        quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
-        team = st.slider("Team Number", 1, 12, 1)
-        incentive = st.number_input(LABELS["incentive"], 0, 200, 0) # Realistic range for dummy company
-        
-        # Hidden Default for 'Day' to keep model accuracy without cluttering UI
-        day_default = "Wednesday"
+        workers = st.number_input(LABELS["no_of_workers"], 1.0, 100.0, 30.0)
+        incentive = st.number_input(LABELS["incentive"], 0, 1000, 0)
 
-    with st.expander("⚙️ Advanced Operational Settings"):
+    with st.expander("⚙️ Advanced Settings"):
         col3, col4 = st.columns(2)
+
         with col3:
             overtime_raw = st.number_input(LABELS["over_time"], 0, 5000, 0)
             idle_time = st.number_input(LABELS["idle_time"], 0.0, 300.0, 0.0)
+
         with col4:
             idle_men = st.number_input(LABELS["idle_men"], 0, 50, 0)
             style = st.selectbox(LABELS["no_of_style_change"], [0, 1, 2])
 
     submit = st.form_submit_button("Analyze Production", use_container_width=True)
 
-# --- LOGIC & OUTPUT ---
+# --- LOGIC ---
 if submit:
-    # 1. Data Preparation
+
+    # Overtime scaling
     ot_scaled = (overtime_raw - 0.0) / (2520.0 * 1.4826) if overtime_raw > 0 else -0.5
+
+    # Build dataframe
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
 
     numeric_map = {
-        'team': team,
+        'team': 1.0,
         'smv': smv,
         'wip': wip,
         'incentive': incentive,
@@ -102,44 +95,63 @@ if submit:
             input_df[col] = 1.0
 
     set_dummy('department', dept.lower())
-    set_dummy('quarter', quarter)
-    set_dummy('day', day_default) # Use the hidden default
     set_dummy('no_of_style_change', str(style))
 
-    # 2. Prediction & Probabilities
-    # We fetch labels directly from the pipeline to ensure the index matches perfectly
-    model_classes = list(pipeline.classes_) 
+    # Prediction
+    pred_idx = pipeline.predict(input_df[model_columns])[0]
     probs = pipeline.predict_proba(input_df[model_columns])[0]
-    status = pipeline.predict(input_df[model_columns])[0]
 
-    # --- SIDEBAR RESULT ---
-    st.sidebar.title("📊 Analysis Result")
+    labels = ['High', 'Low', 'Moderate']
+    status = labels[pred_idx]
+
+    # --- SIDEBAR (FINAL RESULT ONLY) ---
+    st.sidebar.title("📊 Final Result")
+
     color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
+
     st.sidebar.markdown(f"""
-        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center; color:white;">
-            <p style="margin:0; font-size:12px; opacity:0.8;">PREDICTED TIER</p>
-            <h2 style="margin:0; font-size:28px;">{status}</h2>
+        <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+            <h2 style="color:white; margin:0;">{status}</h2>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- MAIN CONTENT TABS ---
-    tab1, tab2 = st.tabs(["AI Confidence & Insights", "Benchmarking"])
+    # --- MAIN OUTPUT ---
 
-    with tab1:
-        st.subheader("🔍 Model Confidence")
-        # Define the order we WANT to show, but look up the index in model_classes
-        display_order = ['Low', 'Moderate', 'High']
-        
-        for label in display_order:
-            if label in model_classes:
-                idx = model_classes.index(label)
-                conf_val = probs[idx]
-                st.write(f"**{label} Productivity**")
-                st.progress(conf_val, text=f"{conf_val*100:.1f}% confidence")
+    # 1. Model Confidence (ordered)
+    st.subheader("🔍 Model Confidence")
 
-        st.divider()
-        st.subheader("💡 Strategic Insights")
-        high_idx = model_classes.index("High") if "High" in model_classes else None
-        
-        if high_idx is not None and probs[high_idx] < 0.5:
-            st.warning("Prediction suggests a struggle to reach 'High' productivity. Review 'Benchmarking' tab to see where you are
+    ordered_labels = ['Low', 'Moderate', 'High']
+
+    for label in ordered_labels:
+        idx = labels.index(label)
+        st.progress(probs[idx], text=f"{label}: {probs[idx]*100:.1f}%")
+
+    # 2. Key Insights (short, decision-focused)
+    st.subheader("💡 Key Insights")
+
+    if probs[labels.index("High")] < 0.4:
+        st.warning("Low probability of achieving High productivity.")
+
+    if incentive < AVERAGES['High']['incentive']:
+        st.info("Increasing incentives may improve performance.")
+
+    if idle_time > 0:
+        st.error("Idle time detected — reduces efficiency.")
+
+    # 3. Detailed Comparison (collapsible)
+    with st.expander("📈 Detailed Performance Insights"):
+
+        def normalize(value, benchmark):
+            return min(value / benchmark, 1.5)
+
+        metrics = {
+            "Task Complexity": (smv, AVERAGES['Moderate']['smv']),
+            "Workload": (wip, AVERAGES['Moderate']['wip']),
+            "Incentive": (incentive, AVERAGES['High']['incentive']),
+            "Workers": (workers, AVERAGES['Moderate']['workers'])
+        }
+
+        for name, (val, ref) in metrics.items():
+            ratio = normalize(val, ref)
+            st.write(f"{name}: {val} (benchmark: {ref})")
+            st.progress(min(ratio, 1.0))
