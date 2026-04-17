@@ -92,7 +92,7 @@ with st.form("input_form"):
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"])
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
-        smv = st.number_input(LABELS["smv"], 2.9, 100.0, 22.0, step=0.1)
+        smv = st.number_input(LABELS["smv"], 2.9, 60.0, 22.0, step=0.1)
         
         if dept == "Finished":
             wip = 0.0
