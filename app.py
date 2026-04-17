@@ -59,7 +59,7 @@ st.markdown("""
 def load_assets():
     m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
     if not os.path.exists(m_path) or not os.path.exists(c_path):
-        st.error("Model files missing.")
+        st.error("Model files missing. Ensure rf_model.pkl and rf_columns.pkl are in the same directory.")
         st.stop()
     return joblib.load(m_path), joblib.load(c_path)
 
@@ -122,33 +122,41 @@ with col_input:
 with col_output:
     if submit:
         # --- PREDICTION LOGIC ---
-        # 1. Scale Overtime (Manual Scaling to match training data distribution)
-        ot_scaled = (overtime - 0.0) / (2520.0 * 1.4826) if overtime > 0 else -0.5
         
-        # 2. Build DataFrame
+        # 1. Build DataFrame initialized with 0.0
         input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
         
-        # 3. Numeric Mapping
+        # 2. Numeric Mapping
+        # We pass the RAW 'overtime' value. 
+        # The internal Pipeline Scaler will handle the conversion automatically.
         numeric_map = {
-            'team': float(team_num), 'smv': float(smv), 'wip': float(wip), 
-            'incentive': float(incentive), 'idle_time': float(idle_time), 
-            'idle_men': float(idle_men), 'no_of_workers': float(workers),
-            'over_time_scaled': float(ot_scaled)
+            'team': float(team_num), 
+            'smv': float(smv), 
+            'wip': float(wip), 
+            'incentive': float(incentive), 
+            'idle_time': float(idle_time), 
+            'idle_men': float(idle_men), 
+            'no_of_workers': float(workers),
+            'over_time_scaled': float(overtime) # Name must match training column
         }
         for k, v in numeric_map.items():
-            if k in model_columns: input_df[k] = v
+            if k in model_columns: 
+                input_df[k] = v
 
-        # 4. Categorical Mapping
+        # 3. Categorical Mapping
         def set_dummy(prefix, val):
             col = f"{prefix}_{val}"
-            if col in model_columns: input_df[col] = 1.0
+            if col in model_columns: 
+                input_df[col] = 1.0
 
         set_dummy('department', dept.lower())
         set_dummy('quarter', quarter)
         set_dummy('day', day)
-        if style > 0: set_dummy('no_of_style_change', str(style))
+        if style > 0: 
+            set_dummy('no_of_style_change', str(style))
 
-        # 5. Model Execution
+        # 4. Model Execution
+        # We use the pipeline directly so the built-in scaler is triggered
         probs = pipeline.predict_proba(input_df[model_columns])[0]
         labels = ['High', 'Low', 'Moderate']
         pred_idx = probs.argmax()
@@ -184,12 +192,12 @@ with col_output:
         # Recommendation
         st.subheader("💡 Strategic Advice")
         if status == "High":
-            st.success("Configuration is optimal. Ensure quality checks remain frequent to match high volume.")
+            st.success("Configuration is optimal. High productivity confirmed.")
             st.balloons()
         elif status == "Moderate":
-            st.warning("Line is stable. Increasing incentives closer to 50.0 or reducing WIP bottlenecks could trigger High status.")
+            st.warning("Line is stable. Look into reducing bottlenecks or increasing incentives to reach 'High' status.")
         else:
-            st.error("Critical Inefficiency. Review Idle Time and ensure Staffing levels match the SMV complexity.")
+            st.error("Operational Risk. High idle time or workforce mismatch detected.")
 
     else:
         # Placeholder when no prediction is made
