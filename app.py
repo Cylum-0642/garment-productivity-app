@@ -83,7 +83,6 @@ with st.form("input_form"):
             wip = st.number_input(LABELS["wip"], 0.0, 25000.0, 500.0, step=10.0)
 
     with col2:
-        team_num = st.selectbox("Team Number", list(range(1, 13)))
         workers = st.number_input(LABELS["no_of_workers"], 1.0, 100.0, 30.0, step=0.5)
         incentive = st.number_input(LABELS["incentive"], 0, 1000, 0)
         day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
@@ -108,7 +107,7 @@ if submit:
     
     # 2. Map Numeric values (Using raw overtime as per your scaling plan)
     numeric_map = {
-        'team': float(team_num), 'smv': float(smv), 'wip': float(wip), 
+        'smv': float(smv), 'wip': float(wip), 
         'incentive': float(incentive), 'idle_time': float(idle_time), 
         'idle_men': float(idle_men), 'no_of_workers': float(workers),
         'over_time_scaled': float(overtime_raw)
@@ -166,7 +165,6 @@ if submit:
             **Recommendations:**
             - **Sustainability:** Avoid increasing 'Overtime' beyond current levels to prevent worker burnout.
             - **Quality Assurance:** Since volume is high, increase frequency of spot checks to ensure 'High' productivity doesn't compromise seam quality.
-            - **Knowledge Sharing:** This team (Team {team_num}) is a benchmark. Document their workflow for underperforming lines.
             """)
             st.balloons()
 
