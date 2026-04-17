@@ -35,7 +35,7 @@ LABELS = {
     "no_of_style_change": "Number of Style Changes"
 }
 
-# High-Productivity Benchmarks (Updated based on common High tiers)
+# High-Productivity Benchmarks
 AVERAGES = {
     'High':     {'smv': 13.7, 'wip': 770.5, 'incentive': 50.0, 'workers': 33.0},
     'Moderate': {'smv': 16.7, 'wip': 682.5, 'incentive': 34.1, 'workers': 38.0},
@@ -72,34 +72,26 @@ with st.form("input_form"):
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"])
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
-        # Dataset Range: 2.9 - 54.56
         smv = st.number_input(LABELS["smv"], 2.9, 55.0, 22.0, step=0.1)
         
         if dept == "Finished":
             wip = 0.0
             st.info("ℹ️ WIP is locked at 0 for Finished department.")
         else:
-            # Dataset Range: 0 - 2698 (After your IQR cleaning)
             wip = st.number_input(LABELS["wip"], 0.0, 2700.0, 500.0, step=10.0)
 
     with col2:
-        # Dataset Range: 2 - 89
         workers = st.number_input(LABELS["no_of_workers"], 2.0, 90.0, 30.0, step=1.0)
-        # Dataset Range: 0 - 3600
         incentive = st.number_input(LABELS["incentive"], 0, 3600, 0, step=10)
         day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
 
     with st.expander("⚙️ Advanced Operational Settings"):
         col3, col4 = st.columns(2)
         with col3:
-            # Dataset Range: 0 - 25920
             overtime_raw = st.number_input(LABELS["over_time"], 0, 26000, 0, step=100)
-            # Dataset Range: 0 - 300
             idle_time = st.number_input(LABELS["idle_time"], 0.0, 300.0, 0.0)
         with col4:
-            # Dataset Range: 0 - 45
             idle_men = st.number_input(LABELS["idle_men"], 0, 45, 0)
-            # Dataset Range: 0, 1, 2
             style = st.selectbox(LABELS["no_of_style_change"], [0, 1, 2])
 
     submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
@@ -108,44 +100,43 @@ with st.form("input_form"):
 # PREDICTION & RESULTS
 # =========================================================
 if submit:
-  # 1. Create a DataFrame from user inputs
-input_data = {
-    'smv': smv,
-    'wip': wip,
-    'over_time': overtime_raw,
-    'incentive': incentive,
-    'idle_time': idle_time,
-    'idle_men': idle_men,
-    'no_of_workers': np.ceil(workers)
-}
+    # 1. Create a dictionary from user inputs
+    input_data = {
+        'smv': smv,
+        'wip': wip,
+        'over_time': overtime_raw,
+        'incentive': incentive,
+        'idle_time': idle_time,
+        'idle_men': idle_men,
+        'no_of_workers': np.ceil(workers)
+    }
 
-# 2. Initialize a blank DataFrame with 0s using the EXACT column order from your pickle
-input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
+    # 2. Initialize blank DataFrame using EXACT column order from pickle
+    input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
 
-# 3. Fill in the numeric values
-for col, val in input_data.items():
-    if col in model_columns:
-        input_df.at[0, col] = val
+    # 3. Fill numeric values
+    for col, val in input_data.items():
+        if col in model_columns:
+            input_df.at[0, col] = val
 
-# 4. Fill in the Categorical (Dummies)
-# This handles the sequence of 'quarter_Quarter1', 'day_Monday', etc.
-def set_dummy(prefix, value):
-    col_name = f"{prefix}_{value}"
-    if col_name in model_columns:
-        input_df.at[0, col_name] = 1.0
+    # 4. Fill Categorical (Dummies)
+    def set_dummy(prefix, value):
+        col_name = f"{prefix}_{value}"
+        if col_name in model_columns:
+            input_df.at[0, col_name] = 1.0
 
-set_dummy('department', dept.lower())
-set_dummy('quarter', quarter)
-set_dummy('day', day)
-if style > 0:
-    set_dummy('no_of_style_change', str(style))
+    set_dummy('department', dept.lower())
+    set_dummy('quarter', quarter)
+    set_dummy('day', day)
+    if style > 0:
+        set_dummy('no_of_style_change', str(style))
 
-    # 4. Predict (Alphabetical Order: High, Low, Moderate)
+    # 5. Predict (Alphabetical Order: High, Low, Moderate)
     labels = ['High', 'Low', 'Moderate']
     probs = pipeline.predict_proba(input_df)[0]
     status = labels[np.argmax(probs)]
 
-    # 5. SIDEBAR RESULT
+    # 6. SIDEBAR RESULT
     st.sidebar.title("📊 Final Result")
     color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
     
@@ -156,7 +147,7 @@ if style > 0:
         </div>
     """, unsafe_allow_html=True)
 
-    # 6. DASHBOARD TABS
+    # 7. DASHBOARD TABS
     t1, t2 = st.tabs(["Analysis & Recommendations", "Operational Benchmarks"])
 
     with t1:
