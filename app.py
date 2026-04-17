@@ -90,7 +90,6 @@ with col_input:
             day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
         with c2:
             quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
-            team_num = st.selectbox("Team Number", list(range(1, 13)))  # kept for UI consistency
 
         st.divider()
 
