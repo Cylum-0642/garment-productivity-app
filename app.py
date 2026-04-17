@@ -43,21 +43,41 @@ AVERAGES = {
 }
 
 @st.cache_resource
-def load_model_assets():
-    model = joblib.load("rf_model.pkl")  # FIX: align with working model style
-    model_columns = joblib.load("rf_columns.pkl")
+import os
+import joblib
+import pandas as pd
+import streamlit as st
+
+# =========================================================
+# DATA & MODEL ASSETS LOADING
+# =========================================================
+
+@st.cache_resource
+def load_assets():
+    """Load the trained Random Forest model and the required column sequence."""
+    m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
+    
+    # Check if files exist to prevent the app from crashing silently
+    if not os.path.exists(m_path) or not os.path.exists(c_path):
+        st.error(f"❌ Critical Error: '{m_path}' or '{c_path}' not found in the directory.")
+        st.stop()
+        
+    model = joblib.load(m_path)
+    model_columns = joblib.load(c_path)
     return model, model_columns
 
 @st.cache_data
 def load_dataset():
-    return pd.read_csv("final_classification_dataset.csv")
+    """Load the cleaned dataset for benchmarks and options."""
+    d_path = "final_classification_dataset.csv"
+    if not os.path.exists(d_path):
+        st.warning(f"⚠️ Warning: '{d_path}' not found. Benchmarks may not load.")
+        return None
+    return pd.read_csv(d_path)
 
-model, model_columns = load_model_assets()
-df = load_dataset()
-
+# Initialize the assets
 pipeline, model_columns = load_assets()
-
-
+df = load_dataset()
 # =========================================================
 # HEADER
 # =========================================================
