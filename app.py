@@ -108,31 +108,37 @@ with st.form("input_form"):
 # PREDICTION & RESULTS
 # =========================================================
 if submit:
-    # 1. Build DataFrame
-    input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
-    
-    # 2. Map Numeric values (Using raw over_time as requested)
-    numeric_map = {
-        'smv': float(smv), 
-        'wip': float(wip), 
-        'incentive': float(incentive), 
-        'idle_time': float(idle_time), 
-        'idle_men': float(idle_men), 
-        'no_of_workers': float(np.ceil(workers)), # Round up to match cleaning
-        'over_time': float(overtime_raw)         # Using the raw feature name
-    }
-    for k, v in numeric_map.items():
-        if k in model_columns: input_df.at[0, k] = v
+  # 1. Create a DataFrame from user inputs
+input_data = {
+    'smv': smv,
+    'wip': wip,
+    'over_time': overtime_raw,
+    'incentive': incentive,
+    'idle_time': idle_time,
+    'idle_men': idle_men,
+    'no_of_workers': np.ceil(workers)
+}
 
-    # 3. Categorical Mapping
-    def set_dummy(prefix, val):
-        col = f"{prefix}_{val}"
-        if col in model_columns: input_df.at[0, col] = 1.0
-    
-    set_dummy('department', dept.lower())
-    set_dummy('quarter', quarter)
-    set_dummy('day', day)
-    if style > 0: set_dummy('no_of_style_change', str(style))
+# 2. Initialize a blank DataFrame with 0s using the EXACT column order from your pickle
+input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
+
+# 3. Fill in the numeric values
+for col, val in input_data.items():
+    if col in model_columns:
+        input_df.at[0, col] = val
+
+# 4. Fill in the Categorical (Dummies)
+# This handles the sequence of 'quarter_Quarter1', 'day_Monday', etc.
+def set_dummy(prefix, value):
+    col_name = f"{prefix}_{value}"
+    if col_name in model_columns:
+        input_df.at[0, col_name] = 1.0
+
+set_dummy('department', dept.lower())
+set_dummy('quarter', quarter)
+set_dummy('day', day)
+if style > 0:
+    set_dummy('no_of_style_change', str(style))
 
     # 4. Predict (Alphabetical Order: High, Low, Moderate)
     labels = ['High', 'Low', 'Moderate']
