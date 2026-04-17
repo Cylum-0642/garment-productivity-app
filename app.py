@@ -65,7 +65,7 @@ def load_assets():
 
 pipeline, model_columns = load_assets()
 
-# Benchmarks for display
+# Benchmarks based on dataset analysis
 AVERAGES = {
     "High": {"smv": 13.7, "wip": 770.5, "incentive": 50.0, "workers": 33.1},
 }
@@ -91,7 +91,7 @@ with col_input:
         # Section 1: Categories
         c1, c2 = st.columns(2)
         with c1:
-            dept = st.radio("Department", ["Sewing", "Finished"])
+            dept = st.radio("Department", ["Sewing", "Finished"], help="Finished department requires 0 WIP.")
             day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
         with c2:
             quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
@@ -103,11 +103,8 @@ with col_input:
         smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0)
         workers = st.number_input("Number of Workers", 1.0, 100.0, 30.0)
         
-        if dept == "Finished":
-            wip = 0.0
-            st.info("WIP locked at 0 for Finished Dept.")
-        else:
-            wip = st.number_input("Current WIP", 0.0, 25000.0, 500.0)
+        # WIP Handling: Capped at 3000 to handle data entry outliers
+        wip = st.number_input("Current WIP", 0.0, 3000.0, 500.0, help="Capped at 3000 for realistic operational analysis.")
             
         incentive = st.number_input("Incentive Bonus", 0, 3600, 0)
         overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0)
@@ -121,14 +118,15 @@ with col_input:
 
 with col_output:
     if submit:
+        # --- VALIDATION BLOCK ---
+        if dept == "Finished" and wip > 0:
+            st.error(f"🚨 **Validation Error:** The 'Finished' department cannot have a WIP of {wip}. Please set WIP to 0.")
+            st.stop()
+
         # --- PREDICTION LOGIC ---
-        
-        # 1. Build DataFrame initialized with 0.0
         input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
         
-        # 2. Numeric Mapping
-        # We pass the RAW 'overtime' value. 
-        # The internal Pipeline Scaler will handle the conversion automatically.
+        # Numeric Mapping (matches final_classification_dataset.csv names)
         numeric_map = {
             'team': float(team_num), 
             'smv': float(smv), 
@@ -137,13 +135,13 @@ with col_output:
             'idle_time': float(idle_time), 
             'idle_men': float(idle_men), 
             'no_of_workers': float(workers),
-            'over_time_scaled': float(overtime) # Name must match training column
+            'over_time': float(overtime) 
         }
         for k, v in numeric_map.items():
             if k in model_columns: 
                 input_df[k] = v
 
-        # 3. Categorical Mapping
+        # Categorical Dummy Mapping
         def set_dummy(prefix, val):
             col = f"{prefix}_{val}"
             if col in model_columns: 
@@ -155,10 +153,10 @@ with col_output:
         if style > 0: 
             set_dummy('no_of_style_change', str(style))
 
-        # 4. Model Execution
-        # We use the pipeline directly so the built-in scaler is triggered
+        # --- MODEL EXECUTION ---
         probs = pipeline.predict_proba(input_df[model_columns])[0]
-        labels = ['High', 'Low', 'Moderate']
+        # Ensure labels match the model's classes_ order
+        labels = list(pipeline.classes_) 
         pred_idx = probs.argmax()
         status = labels[pred_idx]
         conf = probs[pred_idx]
@@ -178,13 +176,17 @@ with col_output:
 
         st.divider()
         
-        # Distribution
+        # Probability progress bars
         st.subheader("📊 Probability Breakdown")
-        for i, lab in enumerate(labels):
-            st.progress(float(probs[i]), text=f"**{lab}**: {probs[i]*100:.1f}%")
+        # Sort labels logically: Low -> Moderate -> High
+        display_order = ['Low', 'Moderate', 'High']
+        for lab in display_order:
+            if lab in labels:
+                idx = labels.index(lab)
+                st.progress(float(probs[idx]), text=f"**{lab}**: {probs[idx]*100:.1f}%")
 
         # Benchmarks
-        st.subheader("📈 Variance vs. High-Performance Benchmark")
+        st.subheader("📈 Variance Analysis (vs. High Benchmark)")
         b1, b2 = st.columns(2)
         b1.metric("SMV Gap", f"{smv:.1f}", f"{smv - 13.7:.1f}", delta_color="inverse")
         b2.metric("Incentive Gap", f"{incentive}", f"{incentive - 50.0:.1f}")
@@ -192,18 +194,18 @@ with col_output:
         # Recommendation
         st.subheader("💡 Strategic Advice")
         if status == "High":
-            st.success("Configuration is optimal. High productivity confirmed.")
+            st.success("Current setup is highly efficient. Maintain standard worker ratios.")
             st.balloons()
         elif status == "Moderate":
-            st.warning("Line is stable. Look into reducing bottlenecks or increasing incentives to reach 'High' status.")
+            st.warning("Potential for improvement. Increasing incentives or reducing SMV complexity through training may push this to 'High'.")
         else:
-            st.error("Operational Risk. High idle time or workforce mismatch detected.")
+            st.error("Efficiency Warning. High risk of missing targets. Review idle time and worker allocation immediately.")
 
     else:
-        # Placeholder when no prediction is made
+        # Initial State
         st.markdown("""
-            <div style="text-align: center; padding: 5rem; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 20px;">
+            <div style="text-align: center; padding: 5 rem; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 20px; margin-top: 2rem;">
                 <h3>Ready for Analysis</h3>
-                <p>Adjust the parameters on the left and click 'Analyze Production' to see results here.</p>
+                <p>Adjust parameters and click 'Analyze Production' to generate results.</p>
             </div>
         """, unsafe_allow_html=True)
