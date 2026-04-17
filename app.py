@@ -42,12 +42,6 @@ AVERAGES = {
     'Low':      {'smv': 15.5, 'wip': 478.0, 'incentive': 15.1, 'workers': 33.0}
 }
 
-@st.cache_resource
-import os
-import joblib
-import pandas as pd
-import streamlit as st
-
 # =========================================================
 # DATA & MODEL ASSETS LOADING
 # =========================================================
