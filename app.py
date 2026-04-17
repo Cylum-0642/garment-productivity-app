@@ -55,6 +55,8 @@ def load_dataset():
 model, model_columns = load_model_assets()
 df = load_dataset()
 
+pipeline, model_columns = load_assets()
+
 
 # =========================================================
 # HEADER
