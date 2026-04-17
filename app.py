@@ -43,14 +43,18 @@ AVERAGES = {
 }
 
 @st.cache_resource
-def load_assets():
-    m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
-    if not os.path.exists(m_path) or not os.path.exists(c_path):
-        st.error("Model files missing. Please ensure 'rf_model.pkl' and 'rf_columns.pkl' are in the directory.")
-        st.stop()
-    return joblib.load(m_path), joblib.load(c_path)
+def load_model_assets():
+    model = joblib.load("rf_model.pkl")  # FIX: align with working model style
+    model_columns = joblib.load("rf_columns.pkl")
+    return model, model_columns
 
-pipeline, model_columns = load_assets()
+@st.cache_data
+def load_dataset():
+    return pd.read_csv("final_classification_dataset.csv")
+
+model, model_columns = load_model_assets()
+df = load_dataset()
+
 
 # =========================================================
 # HEADER
