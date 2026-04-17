@@ -115,7 +115,7 @@ if submit:
 
     # FIX 2: correct label mapping (CRITICAL)
     labels = list(pipeline.classes_)
-    status = labels[pred_idx]
+    status = str(labels[pred_idx])
     conf = float(np.max(probs))
 
     # --- SIDEBAR RESULT ---
@@ -125,7 +125,7 @@ if submit:
 
     st.sidebar.markdown(f"""
         <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center; color:white;">
-            <h2 style="margin:0;">{status.upper()}</h2>
+            <h2 style="margin:0;">{str(status).upper()}</h2>
             <p style="margin:0;">Productivity Level</p>
             <p style="margin:0;">Confidence: {conf*100:.1f}%</p>
         </div>
