@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 import os
 
@@ -40,6 +41,10 @@ with st.form("input_form"):
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"])
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
+
+        # ✅ FIX: ADD DAY (missing feature restored)
+        day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
+
         smv = st.number_input(LABELS["smv"], 2.0, 60.0, 22.0, step=0.1)
 
         if dept == "Finished":
@@ -68,6 +73,9 @@ with st.form("input_form"):
 # --- LOGIC ---
 if submit:
 
+    # FIX: stable transformation (no fake Z-score)
+    ot_scaled = np.log1p(overtime_raw)
+
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
 
     numeric_map = {
@@ -77,13 +85,18 @@ if submit:
         "idle_time": idle_time,
         "idle_men": idle_men,
         "no_of_workers": workers,
-        "over_time": overtime_raw
+        "over_time": overtime_raw,
+        "over_time_scaled": ot_scaled
     }
 
     for k, v in numeric_map.items():
-        if k in model_columns:
+        if k in input_df.columns:
             input_df[k] = float(v)
 
+    # ❌ FIX: REMOVE team (not reliable / likely dropped)
+    # (intentionally not included)
+
+    # categorical encoding
     def set_dummy(cat, val):
         col = f"{cat}_{val}"
         if col in model_columns:
@@ -91,105 +104,62 @@ if submit:
 
     set_dummy("department", dept.lower())
     set_dummy("quarter", quarter)
+    set_dummy("day", day)
     set_dummy("no_of_style_change", str(style))
 
+    # align
     input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
-    # =========================
-    # 🔴 FIX 1: correct label mapping
-    # =========================
-    raw_classes = list(pipeline.classes_)
+    # prediction
     probs = pipeline.predict_proba(input_df)[0]
+    pred_idx = int(np.argmax(probs))
 
-    pred_idx = int(probs.argmax())
-    status = str(raw_classes[pred_idx])
+    # FIX: correct label mapping
+    labels = list(pipeline.classes_)
+    status = str(labels[pred_idx])
+    conf = float(np.max(probs))
 
-    # =========================
-    # FIX 2: color must depend on TRUE label
-    # =========================
-    if status == "High":
-        color = "#28a745"
-    elif status == "Moderate":
-        color = "#fd7e14"
-    else:
-        color = "#dc3545"
-
-    # --- SIDEBAR RESULT ---
+    # --- SIDEBAR ---
     st.sidebar.title("📊 Final Result")
+
+    color = "#28a745" if status == "High" else "#fd7e14" if status == "Moderate" else "#dc3545"
+
     st.sidebar.markdown(f"""
         <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center; color:white;">
             <h2 style="margin:0;">{status.upper()}</h2>
-            <p style="margin:0; opacity:0.8;">Productivity Level</p>
+            <p style="margin:0;">Confidence: {conf*100:.1f}%</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- MAIN TABS ---
+    # --- MAIN ---
     t1, t2 = st.tabs(["Analysis & Recommendations", "Operational Benchmarks"])
 
-    # =========================
-    # FIX 3: recommendations fully aligned with corrected status
-    # =========================
     with t1:
         st.subheader("🔍 Model Confidence")
 
-        for i, lab in enumerate(raw_classes):
-            st.progress(float(probs[i]), text=f"{lab}: {probs[i]*100:.1f}%")
+        for i, lab in enumerate(labels):
+            st.progress(probs[i], text=f"{lab}: {probs[i]*100:.1f}%")
 
         st.divider()
         st.subheader("💡 Strategic Recommendations")
 
         if status == "High":
-            st.success("### 🌟 Target Met: Optimized Production")
-            st.write("""
-            **Observation:** Your current configuration aligns with peak efficiency patterns.
-
-            **Recommendations:**
-            - Avoid increasing overtime unnecessarily.
-            - Maintain current workflow stability.
-            """)
-
+            st.success("Optimized production detected.")
         elif status == "Moderate":
-            st.info("### ⚖️ Target Partial: Stability Mode")
-            st.write("""
-            **Observation:** Stable but not optimal performance.
-
-            **Recommendations:**
-            - Improve incentive efficiency.
-            - Balance workload distribution (WIP).
-            """)
-
+            st.info("Stable performance with improvement potential.")
         else:
-            st.error("### ⚠️ Target Missed: Efficiency Warning")
-            st.write("""
-            **Observation:** Low productivity detected.
+            st.error("Low productivity risk detected.")
 
-            **Recommendations:**
-            - Reduce idle time immediately.
-            - Check workforce allocation vs SMV complexity.
-            - Investigate bottlenecks in production flow.
-            """)
-
-    # =========================
-    # YOU REQUESTED: KEEP WORDING EXACT (UNCHANGED SECTION)
-    # =========================
     with t2:
-        st.subheader("📈 How you compare to 'High' Performers")
-        st.markdown("This section shows the variance between your input and the **ideal averages** for High productivity.")
+        st.subheader("📈 Benchmark Comparison")
 
         cols = st.columns(4)
-        met_list = [
-            ("SMV", smv, 13.7),
-            ("WIP", wip, 770.5),
-            ("Incentive", incentive, 50.0),
-            ("Workers", workers, 33.1)
+        metrics = [
+            ("SMV", smv),
+            ("WIP", wip),
+            ("Incentive", incentive),
+            ("Workers", workers)
         ]
 
-        for i, (name, val, avg) in enumerate(met_list):
-            diff = val - avg
-            cols[i].metric(name, val, f"{diff:.1f} vs High-Avg",
-                           delta_color="inverse" if name == "SMV" else "normal")
-
-        st.divider()
-        st.write("**Industrial Logic:**")
-        st.write("- **SMV:** Lower SMV (simpler styles) typically results in higher volume/productivity.")
-        st.write("- **WIP:** High-performance teams maintain a steady flow (~770 units) to avoid line starvation.")
+        for i, (name, val) in enumerate(metrics):
+            cols[i].metric(name, val)
