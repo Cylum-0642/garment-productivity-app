@@ -69,7 +69,7 @@ def load_dataset():
     return None
 
 # Initialize the assets
-pipeline, model_columns = load_assets()
+model, model_columns = load_assets()
 df = load_dataset()
 
 # =========================================================
@@ -153,7 +153,7 @@ if submit:
 
     # 5. Predict (Alphabetical Order: High, Low, Moderate)
     labels = ['High', 'Low', 'Moderate']
-    probs = pipeline.predict_proba(input_df)[0]
+    probs = model.predict_proba(input_df)[0]
     status = labels[np.argmax(probs)]
 
     # 6. SIDEBAR RESULT
