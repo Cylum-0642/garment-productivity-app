@@ -92,7 +92,20 @@ with st.form("input_form"):
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"])
 
-        if dept == "Finished":
+        quarter = st.selectbox(
+            "Quarter",
+            ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"]
+        )
+
+        smv = st.number_input(
+            LABELS["smv"],
+            min_value=2.9,
+            max_value=60.0,
+            value=22.0,
+            step=0.1
+        )
+
+            if dept == "Finished":
             wip = st.number_input(
                 "Work In Progress (WIP)",
                 min_value=0.0,
@@ -108,19 +121,6 @@ with st.form("input_form"):
                 value=500.0,
                 step=10.0
             )
-
-        quarter = st.selectbox(
-            "Quarter",
-            ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"]
-        )
-
-        smv = st.number_input(
-            LABELS["smv"],
-            min_value=2.9,
-            max_value=60.0,
-            value=22.0,
-            step=0.1
-        )
         
     with col2:
         workers = st.number_input(LABELS["no_of_workers"], 2.0, 90.0, 30.0, step=1.0)
