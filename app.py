@@ -101,7 +101,7 @@ with st.form("input_form"):
         disabled=True
     )
 else:
- wip = st.number_input(LABELS["wip"], 0.0, 2700.0, 500.0, step=10.0)
+    wip = st.number_input(LABELS["wip"], 0.0, 2700.0, 500.0, step=10.0)
     
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
         smv = st.number_input(LABELS["smv"], 2.9, 60.0, 22.0, step=0.1)
