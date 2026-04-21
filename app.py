@@ -91,15 +91,21 @@ with st.form("input_form"):
 
     with col1:
         dept = st.radio("Department", ["Sewing", "Finished"])
+
+        if department == "Finished":
+    wip = st.number_input(
+        "Work In Progress (WIP)",
+        min_value=0,
+        max_value=0,
+        value=0,
+        disabled=True
+    )
+else:
+ wip = st.number_input(LABELS["wip"], 0.0, 2700.0, 500.0, step=10.0)
+    
         quarter = st.selectbox("Quarter", ["Quarter1", "Quarter2", "Quarter3", "Quarter4", "Quarter5"])
         smv = st.number_input(LABELS["smv"], 2.9, 60.0, 22.0, step=0.1)
         
-        if dept == "Finished":
-            wip = 0.0
-            st.info("ℹ️ WIP is locked at 0 for Finished department.")
-        else:
-            wip = st.number_input(LABELS["wip"], 0.0, 2700.0, 500.0, step=10.0)
-
     with col2:
         workers = st.number_input(LABELS["no_of_workers"], 2.0, 90.0, 30.0, step=1.0)
         incentive = st.number_input(LABELS["incentive"], 0, 3600, 0, step=10)
