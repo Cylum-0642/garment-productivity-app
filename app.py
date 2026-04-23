@@ -105,13 +105,11 @@ col_input, col_output = st.columns([1, 1.2], gap="large")
 with col_input:
     st.subheader("📋 Shift Parameters")
 
+    quarter = st.selectbox("Quarter", quarter_options)
     dept = st.selectbox("Department", department_options)
     day = st.selectbox("Day", day_options)
-    quarter = st.selectbox("Quarter", quarter_options)
-
     smv = st.number_input("SMV", 2.0, 60.0, 22.0)
-    workers = st.number_input("Workers", 1.0, 100.0, 30.0)
-
+  
     is_finished = dept.strip().lower() == "finished"
 
     wip = st.number_input(
@@ -125,8 +123,9 @@ with col_input:
     if is_finished:
         wip = 0.0
 
-    incentive = st.number_input("Incentive", 0, 3600, 0)
     overtime = st.number_input("Overtime", 0, 10000, 0)
+    incentive = st.number_input("Incentive", 0, 3600, 0)
+    workers = st.number_input("Workers", 1.0, 100.0, 30.0)
 
     idle_time = st.number_input("Idle Time", 0.0, 300.0, 0.0)
     idle_men = st.number_input("Idle Workers", 0, 50, 0)
