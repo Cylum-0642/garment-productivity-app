@@ -170,7 +170,7 @@ with col_output:
             probs = None
             conf = 1.0
 
-        # =========================
+# =========================
         # DISPLAY (UNCHANGED STYLE LOGIC)
         # =========================
         color = "#16a34a" if status == "High" else "#ea580c" if status == "Moderate" else "#dc2626"
@@ -194,11 +194,30 @@ with col_output:
             for i, l in enumerate(labels):
                 st.progress(float(probs[i]), text=f"{l}: {probs[i]*100:.1f}%")
 
-        # BASIC INSIGHT (kept minimal like your design)
-        st.subheader("💡 Strategic Advice")
+        # DETAILED STRATEGIC INSIGHTS FOR MANAGERS
+        st.subheader("💡 Management Strategic Action Plan")
+        
         if status == "High":
-            st.success("High efficiency configuration detected.")
+            st.success("**Performance Status: Optimal Operations**")
+            st.markdown(f"""
+            - **Maintain Momentum:** Current SMV ({smv}) and Staffing ({workers}) ratio is balanced. Do not redistribute workers from this line.
+            - **Sustainability Alert:** Monitor Overtime ({overtime}). If sustained for >3 days, expect a 15% drop in quality due to fatigue.
+            - **Reward Loop:** Ensure the Incentive ({incentive}) is processed promptly to reinforce this productivity level.
+            """)
+            st.balloons()
+            
         elif status == "Moderate":
-            st.warning("Stable output but optimization possible.")
+            st.warning("**Performance Status: Under-Optimized**")
+            st.markdown(f"""
+            - **WIP Optimization:** A WIP of {wip} may be causing minor bottlenecks. Aim for a "lean flow"—check if certain stations are starving while others are overloaded.
+            - **Incentive Sensitivity:** Data suggests increasing incentives by 10-15% could bridge the gap to 'High' productivity for SMV {smv} tasks.
+            - **Style Change Prep:** With {style} style change(s) active, ensure the Technical Team is present on the floor to minimize 'ramp-up' time losses.
+            """)
+            
         else:
-            st.error("Low productivity risk detected.")
+            st.error("**Performance Status: Critical Efficiency Risk**")
+            st.markdown(f"""
+            - **Immediate Intervention:** {idle_time} mins of Idle Time is the primary driver of loss. Identify if this is due to machine breakdown or fabric supply delays.
+            - **Labor Analysis:** {workers} workers may be insufficient for a complexity (SMV) of {smv}. Consider adding 2-3 temporary helpers from "Finished" to "Sewing".
+            - **Overtime Review:** Current Overtime ({overtime}) is likely being used to fix errors rather than increase output. Shift focus to "Right First Time" quality checks.
+            """)
