@@ -92,7 +92,7 @@ st.markdown("""
 st.markdown("""
     <div class="main-header">
         <h1>🧵 Intelligent Production Consultant</h1>
-        <p>Operational Decision Support System for Garment Factory Managers</p>
+        <p>🚀 Decision Support System | Random Forest Classification Model</p>
     </div>
 """, unsafe_allow_html=True)
 
