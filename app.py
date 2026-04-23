@@ -18,7 +18,7 @@ st.set_page_config(
 # =========================================================
 @st.cache_resource
 def load_model_assets():
-    model = joblib.load("rf_model.pkl")  # FIX: align with working model style
+    model = joblib.load("rf_model.pkl")  
     model_columns = joblib.load("rf_columns.pkl")
     return model, model_columns
 
@@ -34,7 +34,8 @@ df = load_dataset()
 # =========================================================
 quarter_options = sorted(df["quarter"].dropna().unique().tolist())
 department_options = sorted(df["department"].dropna().unique().tolist())
-day_options = sorted(df["day"].dropna().unique().tolist())
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+day_options = [d for d in day_order if d in df["day"].unique()]
 style_change_options = sorted(df["no_of_style_change"].dropna().unique().tolist())
 
 # =========================================================
@@ -111,7 +112,18 @@ with col_input:
     smv = st.number_input("SMV", 2.0, 60.0, 22.0)
     workers = st.number_input("Workers", 1.0, 100.0, 30.0)
 
-    wip = st.number_input("WIP", 0.0, 25000.0, 500.0) if dept != "Finished" else 0.0
+    is_finished = dept.strip().lower() == "finished"
+
+wip = st.number_input(
+    "WIP",
+    0.0,
+    25000.0,
+    0.0,
+    disabled=is_finished
+)
+
+if is_finished:
+    wip = 0.0
 
     incentive = st.number_input("Incentive", 0, 3600, 0)
     overtime = st.number_input("Overtime", 0, 10000, 0)
