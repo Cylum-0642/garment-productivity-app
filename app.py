@@ -105,33 +105,27 @@ col_input, col_output = st.columns([1, 1.2], gap="large")
 with col_input:
     st.subheader("📋 Shift Parameters")
 
+    # Sequence matched to: quarter, department, day, smv, wip, overtime, incentive, workers
     quarter = st.selectbox("Quarter", quarter_options)
     dept = st.selectbox("Department", department_options)
     day = st.selectbox("Day", day_options)
-    smv = st.number_input("SMV", 2.0, 60.0, 22.0)
-  
+    smv = st.number_input("SMV (Allocated Time)", 2.0, 60.0, 22.0)
+    
+    # WIP Logic
     is_finished = dept.strip().lower() == "finished"
+    wip = st.number_input("WIP (Unfinished Items)", 0.0, 25000.0, 500.0, disabled=is_finished)
+    if is_finished: wip = 0.0
 
-    wip = st.number_input(
-        "WIP",
-        0.0,
-        25000.0,
-        0.0,
-        disabled=is_finished
-    )
+    overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0)
+    incentive = st.number_input("Incentive (BDT)", 0, 3600, 0)
+    workers = st.number_input("Number of Workers", 1.0, 100.0, 30.0)
 
-    if is_finished:
-        wip = 0.0
-
-    overtime = st.number_input("Overtime", 0, 10000, 0)
-    incentive = st.number_input("Incentive", 0, 3600, 0)
-    workers = st.number_input("Workers", 1.0, 100.0, 30.0)
-
+    # Rest of the features
     idle_time = st.number_input("Idle Time", 0.0, 300.0, 0.0)
     idle_men = st.number_input("Idle Workers", 0, 50, 0)
     style = st.selectbox("Style Changes", style_change_options)
 
-    submit = st.button("Analyze Production", use_container_width=True)
+    submit = st.button("Analyze Production", use_container_width=True, type="primary")
 
 # =========================================================
 # OUTPUT
