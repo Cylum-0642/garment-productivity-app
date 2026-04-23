@@ -114,16 +114,16 @@ with col_input:
 
     is_finished = dept.strip().lower() == "finished"
 
-wip = st.number_input(
-    "WIP",
-    0.0,
-    25000.0,
-    0.0,
-    disabled=is_finished
-)
+    wip = st.number_input(
+        "WIP",
+        0.0,
+        25000.0,
+        0.0,
+        disabled=is_finished
+    )
 
-if is_finished:
-    wip = 0.0
+    if is_finished:
+        wip = 0.0
 
     incentive = st.number_input("Incentive", 0, 3600, 0)
     overtime = st.number_input("Overtime", 0, 10000, 0)
