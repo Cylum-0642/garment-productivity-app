@@ -35,13 +35,6 @@ LABELS = {
     "no_of_style_change": "Number of Style Changes"
 }
 
-# High-Productivity Benchmarks
-AVERAGES = {
-    'High':     {'smv': 13.7, 'wip': 770.5, 'incentive': 50.0, 'workers': 33.0},
-    'Moderate': {'smv': 16.7, 'wip': 682.5, 'incentive': 34.1, 'workers': 38.0},
-    'Low':      {'smv': 15.5, 'wip': 478.0, 'incentive': 15.1, 'workers': 33.0}
-}
-
 # =========================================================
 # DATA & MODEL ASSETS LOADING
 # =========================================================
@@ -51,7 +44,6 @@ def load_assets():
     """Load the trained Random Forest model and the required column sequence."""
     m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
     
-    # Check if files exist to prevent the app from crashing
     if not os.path.exists(m_path) or not os.path.exists(c_path):
         st.error(f"❌ Critical Error: '{m_path}' or '{c_path}' not found.")
         st.stop()
@@ -115,12 +107,12 @@ with st.form("input_form"):
             style = st.selectbox(LABELS["no_of_style_change"], [0, 1, 2])
 
     submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
-    
+
 # =========================================================
 # PREDICTION & RESULTS
 # =========================================================
 if submit:
-    # 1. Create a dictionary from user inputs
+    # 1. Create a dictionary from user inputs (Matching Dataset columns)
     input_data = {
         'smv': smv,
         'wip': wip,
@@ -128,6 +120,7 @@ if submit:
         'incentive': incentive,
         'idle_time': idle_time,
         'idle_men': idle_men,
+        'no_of_style_change': style,
         'no_of_workers': np.ceil(workers)
     }
 
@@ -148,13 +141,11 @@ if submit:
     set_dummy('department', dept.lower())
     set_dummy('quarter', quarter)
     set_dummy('day', day)
-    if style > 0:
-        set_dummy('no_of_style_change', str(style))
 
-    # 5. Predict (Alphabetical Order: High, Low, Moderate)
-    labels = ['High', 'Low', 'Moderate']
+    # 5. Predict (Using dynamic labels from the model)
     probs = pipeline.predict_proba(input_df)[0]
-    status = labels[np.argmax(probs)]
+    labels = pipeline.classes_  # Dynamically fetch classes: e.g., ['High', 'Low', 'Moderate']
+    status = str(labels[np.argmax(probs)])
 
     # 6. SIDEBAR RESULT
     st.sidebar.title("📊 Final Result")
@@ -172,9 +163,12 @@ if submit:
 
     with t1:
         st.subheader("🔍 Model Confidence")
+        # Create a mapping so we can display results in a logical order (Low -> High)
+        prob_map = dict(zip(labels, probs))
         ordered_display = ['Low', 'Moderate', 'High']
+        
         for lab in ordered_display:
-            val = probs[labels.index(lab)]
+            val = prob_map.get(lab, 0.0)
             st.progress(val, text=f"**{lab}**: {val*100:.1f}%")
 
         st.divider()
@@ -191,19 +185,21 @@ if submit:
             st.warning("### ⚖️ Target Partial: Stability Mode")
             st.write(f"""
             - **Incentive Gap:** Current: {incentive}. High-performing teams average 50.0.
-            - **Bottleneck:** Check if WIP ({wip}) is causing station starvation.
+            - **Bottleneck:** Check if WIP ({wip}) is causing station starvation or overloading.
             """)
         else:
             st.error("### ⚠️ Target Missed: Efficiency Warning")
             st.write(f"""
-            - **Idle Time:** {idle_time} mins detected. Investigate machine breakdowns immediately.
-            - **Staffing:** {workers} workers may be insufficient for SMV {smv}.
+            - **Idle Time:** {idle_time} mins detected. Investigate machine breakdowns or supply chain delays immediately.
+            - **Staffing:** {workers} workers may be insufficient for the current Task Complexity (SMV {smv}).
             """)
 
     with t2:
         st.subheader("📈 How you compare to 'High' Performers")
         cols = st.columns(4)
+        # Static benchmarks based on dataset averages for "High" level
         met_list = [("SMV", smv, 13.7), ("WIP", wip, 770.5), ("Incentive", incentive, 50.0), ("Workers", workers, 33.0)]
+        
         for i, (name, val, avg) in enumerate(met_list):
             diff = val - avg
             cols[i].metric(name, val, f"{diff:.1f} vs High-Avg", delta_color="inverse" if name == "SMV" else "normal")
