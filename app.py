@@ -195,56 +195,58 @@ with col_output:
                 st.progress(float(probs[i]), text=f"{l}: {probs[i]*100:.1f}%")
 
         # BASIC INSIGHT (kept minimal like your design)
+# STRATEGIC ADVICE
         st.subheader("💡 Strategic Advice")
 
-if status == "High":
-    st.success(f"""
-    The current setup reflects an efficient production balance.
+        if status == "High":
+            st.success(f"""
+            **The current setup reflects an efficient production balance.**
 
-    Key strengths:
-    • Workforce ({workers}) is well-matched with workload (WIP: {wip})
-    • SMV ({smv}) is being handled effectively at current capacity
-    • Minimal idle time indicates smooth workflow execution
+            **Key strengths:**
+            * **Capacity Alignment:** Workforce ({workers}) is well-matched with workload (WIP: {wip}).
+            * **Complexity Handling:** SMV ({smv}) is being handled effectively at current capacity.
+            * **Operational Flow:** Minimal idle time indicates smooth workflow execution.
 
-    Insight:
-    High productivity in this system is typically achieved through good workload distribution — not necessarily higher incentives.
+            **Data Insight:**
+            High productivity in this system is driven by **workload distribution**—not necessarily higher incentives.
 
-    Recommendation:
-    Maintain this balance. Focus on consistency in planning and avoid unnecessary changes in workforce or workload allocation.
-    """)
+            **Management Recommendation:**
+            Maintain this balance. Focus on consistency in planning and avoid unnecessary shifts in workforce or workload allocation.
+            """)
+            st.balloons()
 
-elif status == "Moderate":
-    st.warning(f"""
-    The system shows acceptable performance but lacks optimal balance.
+        elif status == "Moderate":
+            st.warning(f"""
+            **The system shows acceptable performance but lacks optimal balance.**
 
-    Key issues:
-    • Mismatch between workers ({workers}) and workload (WIP: {wip})
-    • SMV ({smv}) may not align well with current workforce capacity
-    • Productivity is not limited by idle time, but by allocation efficiency
+            **Observed Gaps:**
+            * **Resource Mismatch:** Potential imbalance between workers ({workers}) and workload (WIP: {wip}).
+            * **Capacity Strain:** Task complexity (SMV: {smv}) may not align perfectly with current workforce capacity.
+            * **Flow Inefficiency:** Productivity is limited by **allocation efficiency** rather than idle time.
 
-    Insight:
-    In this dataset, moderate performance usually comes from inefficient distribution rather than lack of incentives.
+            **Data Insight:**
+            Moderate performance in this dataset usually stems from **inefficient distribution** rather than a lack of worker motivation.
 
-    Recommendation:
-    • Rebalance workload across workers
-    • Adjust worker allocation to better match task complexity (SMV)
-    • Avoid relying on incentives as the primary solution
-    """)
+            **Management Recommendation:**
+            * **Rebalance:** Reallocate workload across the existing worker pool.
+            * **Match SMV:** Adjust worker placement to better match the specific task complexity (SMV).
+            * **Process over Incentives:** Prioritize flow management instead of relying on incentives as a primary solution.
+            """)
 
-else:
-    st.error(f"""
-    The configuration indicates poor production alignment.
+        else:
+            st.error(f"""
+            **The configuration indicates poor production alignment.**
 
-    Critical issues:
-    • Strong imbalance between workforce ({workers}) and workload (WIP: {wip})
-    • SMV ({smv}) likely exceeds effective handling capacity
-    • Operational inefficiency is driven by poor planning, not idle time or incentives
+            **Critical Issues:**
+            * **Structural Imbalance:** Significant mismatch between workforce ({workers}) and workload (WIP: {wip}).
+            * **Handling Capacity:** SMV ({smv}) likely exceeds the current line's effective handling capacity.
+            * **Planning Failure:** Inefficiency is driven by **poor structural planning**, not worker effort or idle time.
 
-    Insight:
-    Low productivity in this system is typically caused by structural mismatch — not worker motivation.
+            **Data Insight:**
+            Low productivity in this system is typically caused by a **structural mismatch**—worker motivation is rarely the root cause.
 
-    Recommendation:
-    • Reallocate workers based on workload demand
-    • Break down high SMV tasks or redistribute them
-    • Reassess production planning instead of increasing incentives
-    """)
+            **Management Recommendation:**
+            * **Reallocate:** Move workers based strictly on real-time workload demand.
+            * **Simplify:** Break down high SMV tasks or redistribute them to more capable lines.
+            * **System Overhaul:** Reassess production planning entirely; increasing incentives will not fix a structural bottleneck.
+            """)
