@@ -196,9 +196,55 @@ with col_output:
 
         # BASIC INSIGHT (kept minimal like your design)
         st.subheader("💡 Strategic Advice")
-        if status == "High":
-            st.success("High efficiency configuration detected.")
-        elif status == "Moderate":
-            st.warning("Stable output but optimization possible.")
-        else:
-            st.error("Low productivity risk detected.")
+
+if status == "High":
+    st.success(f"""
+    The current setup reflects an efficient production balance.
+
+    Key strengths:
+    • Workforce ({workers}) is well-matched with workload (WIP: {wip})
+    • SMV ({smv}) is being handled effectively at current capacity
+    • Minimal idle time indicates smooth workflow execution
+
+    Insight:
+    High productivity in this system is typically achieved through good workload distribution — not necessarily higher incentives.
+
+    Recommendation:
+    Maintain this balance. Focus on consistency in planning and avoid unnecessary changes in workforce or workload allocation.
+    """)
+
+elif status == "Moderate":
+    st.warning(f"""
+    The system shows acceptable performance but lacks optimal balance.
+
+    Key issues:
+    • Mismatch between workers ({workers}) and workload (WIP: {wip})
+    • SMV ({smv}) may not align well with current workforce capacity
+    • Productivity is not limited by idle time, but by allocation efficiency
+
+    Insight:
+    In this dataset, moderate performance usually comes from inefficient distribution rather than lack of incentives.
+
+    Recommendation:
+    • Rebalance workload across workers
+    • Adjust worker allocation to better match task complexity (SMV)
+    • Avoid relying on incentives as the primary solution
+    """)
+
+else:
+    st.error(f"""
+    The configuration indicates poor production alignment.
+
+    Critical issues:
+    • Strong imbalance between workforce ({workers}) and workload (WIP: {wip})
+    • SMV ({smv}) likely exceeds effective handling capacity
+    • Operational inefficiency is driven by poor planning, not idle time or incentives
+
+    Insight:
+    Low productivity in this system is typically caused by structural mismatch — not worker motivation.
+
+    Recommendation:
+    • Reallocate workers based on workload demand
+    • Break down high SMV tasks or redistribute them
+    • Reassess production planning instead of increasing incentives
+    """)
