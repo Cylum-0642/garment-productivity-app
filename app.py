@@ -117,7 +117,7 @@ with col_input:
     if is_finished: wip = 0.0
 
     overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0)
-    incentive = st.number_input("Incentive (BDT)", 0, 3600, 0)
+    incentive = st.number_input("Incentive", 0, 3600, 0)
     workers = st.number_input("Number of Workers", 1.0, 100.0, 30.0)
 
     # Rest of the features
