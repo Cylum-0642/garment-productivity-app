@@ -85,8 +85,7 @@ with st.form("input_form"):
     st.subheader("⚙️ 2. Primary Production Levers")
     n1, n2, n3, n4 = st.columns(4)
     with n1: smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0, step=0.1)
-    with n2:
-    is_finished = dept.strip().lower() == "finished"
+    with n2: is_finished = dept.strip().lower() == "finished"
     wip = st.number_input("WIP (Unfinished Items)", 0.0, 25000.0, 500.0, disabled=is_finished)
     if is_finished: wip = 0.0
     with n3: workers = st.number_input("Number of Workers", 1, 100, 30, step=1)
