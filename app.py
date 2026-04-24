@@ -66,7 +66,7 @@ def normalize_label(pred):
 # =========================================================
 st.markdown("""
     <div class="main-header">
-        <h1>🧵 Intelligent Production Consultant</h1>
+        <h1>🧵 Intelligent Production Consultant - Random Forest</h1>
         <p>🚀 Action-Oriented Decision Support | Real-time Gap Analysis</p>
     </div>
 """, unsafe_allow_html=True)
