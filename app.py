@@ -46,22 +46,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# DATA & ASSETS
+# ASSETS & LOGIC
 # =========================================================
-# Benchmarks rounded for logical comparison (Integers for discrete items)
-AVERAGES = {
-    'High': {
-        'smv': 13.7, 
-        'wip': 771,        # Rounded from 770.5
-        'incentive': 50, 
-        'workers': 33      # Rounded from 33.1
-    }
-}
+AVERAGES = {'High': {'smv': 13.7, 'wip': 771, 'incentive': 50, 'workers': 33}}
 
 @st.cache_resource
 def load_assets():
-    m_path, c_path = 'rf_model.pkl', 'rf_columns.pkl'
-    return joblib.load(m_path), joblib.load(c_path)
+    return joblib.load('rf_model.pkl'), joblib.load('rf_columns.pkl')
 
 @st.cache_data
 def load_dataset():
@@ -86,87 +77,94 @@ def normalize_label(pred):
 st.markdown("""
     <div class="main-header">
         <h1>🧵 Intelligent Production Consultant</h1>
-        <p>🚀 Decision Support System | Production Logic: Discrete vs Continuous Values</p>
+        <p>🚀 Decision Support System | Reorganized for User Workflow</p>
     </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# INPUT FORM (Refined Data Types)
+# INPUT FORM
 # =========================================================
 with st.form("input_form"):
-    st.subheader("📋 Production Parameters")
-    
+    st.subheader("🗓️ 1. Shift Context")
     c1, c2, c3 = st.columns(3)
     with c1:
         quarter = st.selectbox("Quarter", sorted(df_raw["quarter"].unique()))
     with c2:
+        # We select the department here
         dept = st.selectbox("Department", sorted(df_raw["department"].unique()))
     with c3:
         day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
 
+    st.divider()
+    
+    st.subheader("⚙️ 2. Primary Production Levers")
+    # This is where the model order matters for the user flow
     n1, n2, n3, n4 = st.columns(4)
     with n1:
-        # SMV is time-based, decimals are necessary
-        smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0, step=0.1)
+        smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0, step=0.1, help="Standard Minute Value")
     with n2:
-        # WIP is units, should be integers
-        is_finished = dept.strip().lower() == "finished"
-        wip = st.number_input("Current Workload (WIP)", 0, 25000, 500, disabled=is_finished)
-        if is_finished: wip = 0
+        # --- CORRECTED WIP DISABLE LOGIC ---
+        # We check the string value of the selected department
+        is_finished = "finished" in dept.lower()
+        # If finished, we force value to 0 and disable input
+        wip = st.number_input("Current Workload (WIP)", 0, 25000, 0 if is_finished else 500, disabled=is_finished)
     with n3:
-        # Overtime is minutes, usually entered in whole blocks
-        overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0, step=1)
+        workers = st.number_input("Number of Workers", 1, 100, 30, step=1)
     with n4:
-        # Incentive is currency/bonus units
         incentive = st.number_input("Incentive (Bonus)", 0, 3600, 0, step=1)
 
-    s1, s2, s3, s4 = st.columns(4)
-    with s1:
-        # Workers must be whole numbers
-        workers = st.number_input("Number of Workers", 1, 100, 30, step=1)
-    with s2:
-        # Idle time can have decimals (fractions of minutes)
-        idle_time = st.number_input("Idle Time (Mins)", 0.0, 300.0, 0.0, step=0.5)
-    with s3:
-        # Idle men must be integers
-        idle_men = st.number_input("Idle Workers", 0, 50, 0, step=1)
-    with s4:
-        style = st.selectbox("Style Changes", sorted(df_raw["no_of_style_change"].unique()))
+    with st.expander("🛠️ 3. Operational Stability & Exceptions", expanded=False):
+        st.caption("Adjust these only if there were style changes or production delays.")
+        s1, s2, s3, s4 = st.columns(4)
+        with s1:
+            overtime = st.number_input("Overtime (Mins)", 0, 10000, 0, step=10)
+        with s2:
+            idle_time = st.number_input("Idle Time (Mins)", 0.0, 300.0, 0.0, step=0.5)
+        with s3:
+            idle_men = st.number_input("Idle Workers", 0, 50, 0)
+        with s4:
+            style = st.selectbox("Style Changes", sorted(df_raw["no_of_style_change"].unique()))
 
     submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
 
 # =========================================================
-# OUTPUT & ANALYSIS
+# PREDICTION & ANALYSIS
 # =========================================================
 if submit:
+    # 1. Align features with model sequence
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
     
+    # 2. Map Numerical Values
+    # Sequence: smv, wip, overtime, incentive, workers, others
     numeric_map = {
-        "smv": smv, "wip": wip, "over_time": overtime, 
-        "incentive": incentive, "no_of_workers": workers,
-        "idle_time": idle_time, "idle_men": idle_men
+        "smv": smv, 
+        "wip": wip, 
+        "over_time": overtime, 
+        "incentive": incentive, 
+        "no_of_workers": workers,
+        "idle_time": idle_time, 
+        "idle_men": idle_men
     }
-    
     for k, v in numeric_map.items():
         if k in input_df.columns:
             input_df[k] = float(v)
 
+    # 3. Map Categorical Values
     safe_one_hot(input_df, "quarter", quarter)
     safe_one_hot(input_df, "department", dept)
     safe_one_hot(input_df, "day", day)
     safe_one_hot(input_df, "no_of_style_change", style)
 
-    input_df = input_df.reindex(columns=model_columns, fill_value=0.0)
-
+    # 4. Run Model
     if hasattr(model, "predict_proba"):
         probs = model.predict_proba(input_df)[0]
-        pred_idx = int(np.argmax(probs))
-        status = normalize_label(pred_idx)
+        status = normalize_label(np.argmax(probs))
         conf = float(np.max(probs))
     else:
         status = normalize_label(model.predict(input_df)[0])
         probs, conf = None, 1.0
 
+    # 5. UI Result Section
     res_col, advice_col = st.columns([1, 2])
 
     with res_col:
@@ -187,35 +185,29 @@ if submit:
                 st.progress(float(probs[i]), text=f"{l}")
 
     with advice_col:
-        t1, t2 = st.tabs(["💡 Strategic Advice", "📈 Comparison to 'High' Performers"])
+        t1, t2 = st.tabs(["💡 Strategic Recommendations", "📈 Comparison vs. High Performers"])
         
         with t1:
             if status == "High":
-                st.success(f"**Optimal Balance!** Your workforce of {int(workers)} effectively handles the SMV of {smv}.")
+                st.success(f"### Target Met\nYour balance of {int(workers)} workers for an SMV of {smv} is optimal.")
                 st.balloons()
             elif status == "Moderate":
-                st.warning(f"**Capacity Gap.** Reallocate workers to handle the workload ({int(wip)} units) more efficiently.")
+                st.warning(f"### Efficiency Gap\nAdjust worker distribution or review WIP ({int(wip)}) flow.")
             else:
-                st.error(f"**Critical Imbalance.** The workload ({int(wip)} units) is too high for {int(workers)} workers at SMV {smv}.")
+                st.error(f"### Critical Warning\nThe current setup indicates a major structural bottleneck.")
 
         with t2:
             st.write("Variance against High-Productivity benchmarks:")
             m_cols = st.columns(2)
-            # Define if we want decimals for display based on the feature name
             comp_data = [
-                ("SMV", smv, AVERAGES['High']['smv'], True),      # True = show decimals
-                ("WIP", wip, AVERAGES['High']['wip'], False),     # False = integer
+                ("SMV", smv, AVERAGES['High']['smv'], True),
+                ("WIP", wip, AVERAGES['High']['wip'], False),
                 ("Incentive", incentive, AVERAGES['High']['incentive'], False),
                 ("Workers", workers, AVERAGES['High']['workers'], False)
             ]
-            for i, (name, val, avg, show_decimal) in enumerate(comp_data):
+            for i, (name, val, avg, dec) in enumerate(comp_data):
                 diff = val - avg
+                fmt = ".1f" if dec else ".0f"
                 target_col = m_cols[0] if i < 2 else m_cols[1]
-                
-                # Format string based on decimal preference
-                fmt = ".1f" if show_decimal else ".0f"
-                val_display = f"{val:{fmt}}"
-                diff_display = f"{diff:{fmt}} vs High-Avg"
-                
-                target_col.metric(name, val_display, diff_display, 
+                target_col.metric(name, f"{val:{fmt}}", f"{diff:{fmt}} vs High-Avg", 
                                  delta_color="inverse" if name == "SMV" else "normal")
