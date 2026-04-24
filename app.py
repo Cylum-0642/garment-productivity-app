@@ -86,39 +86,48 @@ def normalize_label(pred):
 st.markdown("""
     <div class="main-header">
         <h1>🧵 Intelligent Production Consultant</h1>
-        <p>🚀 Decision Support System | Optimized for Prediction Accuracy</p>
+        <p>🚀 Decision Support System | Raondom Forest Model</p>
     </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# INPUT FORM
+# INPUT FORM (Reordered based on Dataset Sequence)
 # =========================================================
 with st.form("input_form"):
-    st.subheader("🔹 Production Parameters")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        dept = st.selectbox("Department", sorted(df_raw["department"].unique()))
+    st.subheader("📋 Production Parameters")
+    
+    # Row 1: Categorical Foundation
+    c1, c2, c3 = st.columns(3)
+    with c1:
         quarter = st.selectbox("Quarter", sorted(df_raw["quarter"].unique()))
-        smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0, step=0.1)
-        
+    with c2:
+        dept = st.selectbox("Department", sorted(df_raw["department"].unique()))
+    with c3:
+        day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
+
+    # Row 2: Core Numeric Metrics
+    n1, n2, n3, n4 = st.columns(4)
+    with n1:
+        smv = st.number_input("Task Complexity (SMV)", 2.0, 60.0, 22.0)
+    with n2:
         is_finished = dept.strip().lower() == "finished"
         wip = st.number_input("Current Workload (WIP)", 0.0, 25000.0, 500.0, disabled=is_finished)
         if is_finished: wip = 0.0
-
-    with col2:
-        workers = st.number_input("Number of Workers", 1.0, 100.0, 30.0, step=0.5)
+    with n3:
+        overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0)
+    with n4:
         incentive = st.number_input("Incentive (Bonus)", 0, 3600, 0)
-        day = st.selectbox("Day of Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"])
 
-    with st.expander("⚙️ Advanced Operational Settings"):
-        col3, col4 = st.columns(2)
-        with col3:
-            overtime = st.number_input("Overtime (Minutes)", 0, 10000, 0, step=10)
-            idle_time = st.number_input("Idle Time (Minutes)", 0.0, 300.0, 0.0)
-        with col4:
-            idle_men = st.number_input("Idle Workers", 0, 50, 0)
-            style = st.selectbox("Number of Style Changes", sorted(df_raw["no_of_style_change"].unique()))
+    # Row 3: Workforce & Secondary factors
+    s1, s2, s3, s4 = st.columns(4)
+    with s1:
+        workers = st.number_input("Number of Workers", 1.0, 100.0, 30.0)
+    with s2:
+        idle_time = st.number_input("Idle Time (Mins)", 0.0, 300.0, 0.0)
+    with s3:
+        idle_men = st.number_input("Idle Workers", 0, 50, 0)
+    with s4:
+        style = st.selectbox("Style Changes", sorted(df_raw["no_of_style_change"].unique()))
 
     submit = st.form_submit_button("Analyze Production Status", use_container_width=True, type="primary")
 
